@@ -1,0 +1,152 @@
+/* ---------- 02 // interiors — editorial grid (style 1) ---------- */
+
+.work{
+  position:absolute;inset:0;
+  background:transparent;    /* transparent throughout — not just mid-transition */
+  overflow:hidden;
+  will-change:transform;
+  opacity:0;
+}
+
+/* The interiors block sits inside the pinned stage, which starts at the very
+   top of the viewport — so it must clear the sticky nav itself. --nav-h is
+   measured live in components/navigation/navigation.js (the bar is one row wide, two rows
+   narrow, so a fixed value would under-clear on mobile). Without this the
+   "Studio Philosophy" label sits entirely behind the opaque bar and the
+   headline's ascenders are cut. */
+.work__inner{
+  padding:calc(var(--nav-h,72px) + var(--space-4)) var(--margin) var(--space-4);
+  max-width:var(--maxw);
+  margin:0 auto;
+  box-sizing:border-box;
+  /* Fill the pinned stage and let the composition take whatever the header
+     leaves, rather than adding fixed vh rows to a fixed header and hoping the
+     total lands under 100vh — it does not, once the nav clearance is added. */
+  height:100%;
+  display:flex;
+  flex-direction:column;
+}
+
+.work__head{margin-bottom:0}
+.work__title{text-transform:uppercase;margin:var(--space-1) 0 var(--space-2)}
+.work__subtitle{max-width:38ch}
+
+/* The editorial composition — asymmetric grid matching the style 1 reference */
+.work__composition{
+  display:grid;
+  grid-template-columns:3fr 2.5fr 2fr 2.8fr;
+  gap:10px 16px;
+  position:relative;
+  overflow:visible;           /* let figures fly past the grid during the exit */
+  margin-top:var(--space-4);
+  flex:1;
+  min-height:0;
+}
+
+/* Column, not height:100% — the caption sits below the media, so a media box
+   that claims the whole grid row pushes its own caption past the bottom of
+   the pinned stage and straight into the clip. */
+.work__img{margin:0;min-width:0;overflow:hidden;display:flex;flex-direction:column}
+.work__img .ds-media{flex:1;min-height:0;overflow:hidden}
+/* Split from a single shared rule on purpose. .ds-media img[data-parallax]
+   in the design system sits at specificity (0,2,1); an unscoped
+   `.work__img .ds-media img` selector lands at the exact same (0,2,1), so
+   the two would only be settled by source order — the design system loads
+   first here, so this file would silently win and stomp the parallax
+   transform/position with a flat width/height/object-fit. :not() makes the
+   two selectors mutually exclusive instead of tied, so there is no order to
+   accidentally depend on and nothing left to re-merge later. */
+.work__img .ds-media img:not([data-parallax]){width:100%;height:100%;object-fit:cover;display:block}
+/* The parallaxed case supplies only what the design system's own
+   [data-parallax] rule does not: that rule owns position/top/height
+   (the overhang math needs that box), this owns width (needed once
+   reduced motion drops position:absolute, and left/right:0 stop implying
+   full width) and display. */
+.work__img .ds-media img[data-parallax]{width:100%;object-fit:cover;display:block}
+/* nowrap only where there is room for it — below 1024px the narrower grid
+   columns cut captions like "Brass fabrication // Patina & form" mid-word. */
+.work__img figcaption{margin-top:var(--space-2);white-space:nowrap}
+@media(max-width:1024px){
+  .work__img figcaption{white-space:normal;text-wrap:balance}
+}
+
+.work__right{min-width:0}
+
+.work__img--large{
+  grid-column:1;
+  /* grid-row:1 / 3; */
+}
+
+.work__img--mid1{
+  grid-column:2;
+  /* grid-row:1;
+  align-self:end; */
+  padding-top:10%;
+}
+.work__img--mid2{
+  grid-column:3;
+  /* grid-row:1 / 3; */
+  padding-top:5%;
+}
+
+.work__right{
+  grid-column:4;
+  /* grid-row:1 / 3; */
+  display:flex;flex-direction:column;
+  gap:16px;
+}
+
+.work__statement{
+  position:relative;
+  padding-bottom:var(--space-4);
+}
+.work__statement .ds-headline{
+  font-size:clamp(0.95rem,1.3vw,1.25rem);
+  text-transform:uppercase;
+  line-height:1.35;
+}
+
+.work__pair{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+  flex:1;min-height:0;
+}
+
+/* ---------- narrow ----------
+   Must stay after the base rules above — same specificity. */
+
+@media(max-width:1024px){
+  .work__composition{
+    grid-template-columns:2.5fr 1.5fr 1.5fr 2fr;
+    gap:8px 12px;
+  }
+}
+
+@media(max-width:760px){
+  .work__composition{
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .work__img--large{grid-column:1 / -1;grid-row:auto}
+  .work__img--mid1{padding-top:0;align-self:start}
+  .work__img--mid2{grid-column:auto;grid-row:auto;padding-top:0}
+  .work__right{grid-column:1 / -1;grid-row:auto}
+}
+
+/* With motion off there is no pin and no hero->interiors morph, so the two
+   sections must simply stack and read top to bottom. .work has to leave the
+   absolute layer to do that — left as position:absolute it lands exactly on
+   top of the hero (same 100svh box) and the two sections render superimposed. */
+@media(prefers-reduced-motion:reduce){
+  .work{
+    position:static;
+    inset:auto;
+    transform:none !important;
+    opacity:1 !important;
+    overflow:visible;
+  }
+  .work__inner{padding-block:var(--section-pad-tight)}
+  .work__composition{grid-template-rows:auto auto}
+  .work__img .ds-media{height:auto;aspect-ratio:4 / 3}
+}

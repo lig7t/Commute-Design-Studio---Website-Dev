@@ -1,0 +1,30 @@
+/* ============================================================
+   Commute Design Studio — design system entry point.
+
+   Import order is load-bearing: theme (custom properties) -> base
+   (element defaults) -> elements (the ds-* classes that consume them).
+
+   Every rule below is a plain-CSS port of the system's components, so a
+   static page can use them without a component layer. Nothing here
+   introduces a hex, a raw size, or a duration that is not already a token.
+
+   Two ds-* groups are NOT here: the navigation bar and the theme toggle.
+   They carry behaviour as well as style, so each lives with its script
+   under components/.
+   ============================================================ */
+
+@import url('theme/fonts.css');
+@import url('theme/colors.css');
+@import url('theme/typography.css');
+@import url('theme/spacing.css');
+@import url('theme/motion.css');
+
+@import url('base/base.css');
+
+@import url('elements/typography.css');
+@import url('elements/layout.css');
+@import url('elements/media.css');
+@import url('elements/project-row.css');
+@import url('elements/structural-list.css');
+@import url('elements/registration-mark.css');
+@import url('elements/reveal.css');

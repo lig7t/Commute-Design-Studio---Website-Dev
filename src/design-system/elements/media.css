@@ -1,0 +1,94 @@
+/* ---------- MediaSlot / Figure / Caption ---------- */
+
+.ds-figure{margin:0}
+
+.ds-media{
+  position:relative;
+  background:var(--matte);
+  border:var(--hairline) solid var(--rule);
+  overflow:hidden;
+  display:flex;align-items:flex-end;
+  padding:0;
+}
+.ds-media[data-ratio="4:5"]{aspect-ratio:4 / 5}
+.ds-media[data-ratio="3:4"]{aspect-ratio:3 / 4}
+.ds-media[data-ratio="16:9"]{aspect-ratio:16 / 9}
+.ds-media[data-ratio="21:9"]{aspect-ratio:21 / 9}
+.ds-media[data-ratio="1:1"]{aspect-ratio:1 / 1}
+
+.ds-media img{
+  width:100%;height:100%;object-fit:cover;
+  transform:scale(1);
+  transition:transform var(--dur-base) var(--ease-out);
+}
+
+/* A drifting image is oversized inside its mask, so the frame stays put
+   and only the photograph moves — depth, not a sliding plate. --overhang
+   sizes that oversizing (top and bottom, as a percentage of the
+   CONTAINER's height); --drift is a percentage of the IMAGE's OWN height,
+   not the container's — translate3d()'s percentage argument is always
+   relative to the element it moves, so the two percentages are deliberately
+   relative to different boxes. With a 30% overhang the image itself is 160%
+   of the container's height (1 + 2 * 0.30), so the largest --drift that
+   never exposes a mask edge is 30 / 160 = 18.75%, rounded down to 18.
+
+   Drift and hover-scale are kept in separate custom properties and
+   composed into one transform, so scroll motion and the hover state do
+   not overwrite each other. Registering them makes the scale
+   interpolable, so the hover still eases. */
+@property --drift{syntax:"<length-percentage>";inherits:false;initial-value:0px}
+@property --img-scale{syntax:"<number>";inherits:false;initial-value:1}
+
+.ds-media img[data-parallax]{
+  --overhang:30%;                 /* of the CONTAINER's height, top and bottom */
+  transform:translate3d(0,var(--drift),0) scale(var(--img-scale));
+  transition:--img-scale var(--dur-base) var(--ease-out);
+  will-change:transform;
+}
+/* The oversizing above exists purely to give scroll-driven drift room to
+   move without exposing a mask edge — motion machinery. With motion off
+   there is no drift (mountParallax() only builds inside a no-preference
+   matchMedia, and mountReel() never creates the pin that drives the
+   interiors' own drift either), so absolutely positioning and overhanging
+   the image would only crop the photograph for no reason; reduced motion
+   falls back to the plain in-flow sizing from the base .ds-media img rule
+   above instead. */
+@media(prefers-reduced-motion:no-preference){
+  .ds-media img[data-parallax]{
+    position:absolute;left:0;right:0;
+    top:calc(-1 * var(--overhang));
+    height:calc(100% + 2 * var(--overhang));
+  }
+}
+@media(hover:hover){
+  .ds-media[data-hover="true"]:hover img[data-parallax]{--img-scale:var(--hover-scale)}
+}
+/* Scoped away from [data-parallax]: that image composes its own transform from
+   --drift + --img-scale, and this rule outranks it (0,3,1 vs 0,2,1), so an
+   unscoped version replaces the drift with a bare scale() and the photograph
+   snaps by the full parallax offset the moment the pointer lands on it. */
+@media(hover:hover){
+  .ds-media[data-hover="true"]:hover img:not([data-parallax]){transform:scale(var(--hover-scale))}
+}
+
+/* src:null — stone matte at the declared ratio, alt in Micro tier,
+   bottom-left. The footprint is identical once photography lands. */
+.ds-media--empty{padding:var(--gap-caption)}
+.ds-media__alt{
+  font-size:var(--size-micro);
+  letter-spacing:var(--track-micro);
+  line-height:var(--leading-micro);
+  text-transform:uppercase;
+  color:var(--text-lo);
+}
+
+.ds-caption{
+  font-size:var(--size-micro);
+  font-weight:var(--weight-body);
+  letter-spacing:var(--track-micro);
+  line-height:var(--leading-micro);
+  text-transform:uppercase;
+  color:var(--text-lo);
+  margin:0;
+}
+.ds-figure .ds-caption{margin-top:var(--gap-caption)}

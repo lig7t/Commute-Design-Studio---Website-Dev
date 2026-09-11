@@ -1,0 +1,15 @@
+/* ---------- layout: Section, Grid, SectionHead, Rule ---------- */
+
+.ds-section{max-width:var(--maxw);margin-inline:auto;padding-inline:var(--margin);padding-block:var(--section-pad)}
+.ds-section--tight{padding-block:var(--section-pad-tight)}
+
+.ds-grid{display:grid;grid-template-columns:repeat(var(--columns),1fr);gap:var(--gutter)}
+
+.ds-sectionhead{display:flex;justify-content:space-between;align-items:baseline;gap:var(--space-5);padding-bottom:var(--space-4);border-bottom:var(--hairline) solid var(--rule);margin-bottom:var(--gap-media-rows)}
+
+.ds-rule{border:0;border-top:var(--hairline) solid var(--rule);margin:0}
+
+/* the spec's vertical rhythm, as utilities */
+.ds-gap-label{margin-bottom:var(--gap-label-headline)}
+.ds-gap-copy{margin-top:var(--gap-headline-copy)}
+.ds-gap-media{margin-top:var(--gap-copy-media)}

@@ -1,0 +1,15 @@
+dist/
+node_modules/
+package-lock.json
+public/
+
+# CSS and HTML are hand-formatted here, deliberately.
+#
+# The stylesheets write many rules one-per-line so a section block reads as a
+# table of related values; Prettier explodes each into multiple lines and the
+# comparison is lost. index.html carries comment banners and indentation that
+# mark the section structure of the page.
+#
+# Prettier owns the JavaScript, where consistency matters more than layout.
+*.css
+*.html

@@ -1,0 +1,13 @@
+/* ---------- type tiers (theme/typography.css) ---------- */
+
+.ds-display{font-size:var(--size-display);font-weight:var(--weight-structural);letter-spacing:var(--track-display);line-height:var(--leading-display);color:var(--text-hi);margin:0;padding-block:0.06em}
+.ds-headline{font-size:var(--size-headline);font-weight:var(--weight-structural);letter-spacing:var(--track-headline);line-height:var(--leading-headline);color:var(--text-hi);margin:0}
+.ds-title{font-size:var(--size-title);font-weight:var(--weight-structural);letter-spacing:var(--track-title);line-height:var(--leading-title);color:var(--text-hi);margin:0}
+.ds-body{max-width:var(--measure);margin:0}
+.ds-meta{font-size:var(--size-meta);font-weight:var(--weight-structural);letter-spacing:var(--track-meta);line-height:var(--leading-meta);text-transform:uppercase;font-variant-numeric:tabular-nums;color:var(--text-lo);margin:0}
+.ds-micro{font-size:var(--size-micro);font-weight:var(--weight-body);letter-spacing:var(--track-micro);line-height:var(--leading-micro);text-transform:uppercase;color:var(--text-lo);margin:0}
+
+/* Split-word reveal (lib/text.js). inline-block is what makes each word
+   transformable; the whitespace between them stays a real text node, so
+   the line still wraps normally. */
+.ds-word{display:inline-block;will-change:transform}

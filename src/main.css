@@ -1,0 +1,36 @@
+/* ============================================================
+   main.css — the site's stylesheet entry point.
+
+   Order is load-bearing, and it runs from most general to most specific:
+
+     design system   the custom properties, element defaults, and ds-* primitives
+     components      shared UI that carries its own behaviour
+     sections        one file per section of the page, in document order
+
+   Several rules resolve ties by source order rather than specificity, so
+   moving an @import is a behavioural change, not a cosmetic one.
+   ============================================================ */
+
+@import url('design-system/index.css');
+
+@import url('components/navigation/navigation.css');
+@import url('components/theme-toggle/theme-toggle.css');
+@import url('components/project-card/project-card.css');
+
+@import url('sections/hero/hero.css');
+@import url('sections/work/work.css');
+@import url('sections/lighting/lighting.css');
+@import url('sections/contact/contact.css');
+@import url('sections/footer/footer.css');
+@import url('sections/gallery/gallery.css');
+
+/* ---------- page-level clipping ----------
+   Elements awaiting their entrance sit translated off-mark, which would
+   otherwise scroll the page horizontally. `clip` (not `hidden`) creates no
+   scroll container, so the pinned stage and sticky nav are unaffected.
+   Applied to sections rather than body for exactly that reason. */
+
+.ds-section,
+.about__inner {
+  overflow-x: clip;
+}

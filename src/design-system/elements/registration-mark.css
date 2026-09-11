@@ -1,0 +1,6 @@
+/* ---------- RegistrationMark — 13px cross, two per viewport max ---------- */
+
+.ds-reg{position:relative;display:inline-block;width:13px;height:13px}
+.ds-reg::before,.ds-reg::after{content:"";position:absolute;background:var(--stone)}
+.ds-reg::before{left:6px;top:0;width:1px;height:13px}
+.ds-reg::after{top:6px;left:0;height:1px;width:13px}

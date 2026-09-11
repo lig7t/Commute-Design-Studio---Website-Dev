@@ -1,0 +1,110 @@
+/* ---------- Selected Work — infinite scroll gallery ---------- */
+
+.gallery{
+  position:relative;
+  height:100vh; height:100svh !important;
+  overflow:hidden;
+  background:none;
+  /* closeSeam() in sections/hero/hero.js measures and owns this margin now — the
+     gap it closes depends on `+=500%` resolving against innerHeight while
+     .stage is sized in svh, and those two units diverge on mobile, so a
+     static svh value here could never be right on both desktop and phones. */
+  margin-top:0;
+}
+.gallery__track{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12vh;
+  width:100%;
+  /* The arrival translation gallery.js applies to the whole track now
+     supplies the head-room above the first slide — this padding would only
+     double it up. */
+  /* padding-top:0; */
+  will-change:transform;
+}
+.gallery__slide{
+  flex-shrink:0;
+  transform:translateX(var(--stagger,0));
+  cursor:pointer;
+  outline:none;
+  margin:0;padding:0;
+}
+.gallery__slide:nth-child(1){--stagger:-24vw;--img-w:290px}
+.gallery__slide:nth-child(2){--stagger:14vw;--img-w:330px}
+.gallery__slide:nth-child(3){--stagger:-18vw;--img-w:270px}
+.gallery__slide:nth-child(4){--stagger:22vw;--img-w:420px}
+.gallery__slide:nth-child(5){--stagger:-26vw;--img-w:300px}
+.gallery__slide:nth-child(6){--stagger:28vw;--img-w:180px}
+.gallery__slide:nth-child(7){--stagger:-20vw;--img-w:250px}
+.gallery__slide:nth-child(8){--stagger:8vw;--img-w:300px}
+.gallery__slide:nth-child(9){--stagger:-12vw;--img-w:280px}
+.gallery__slide:nth-child(10){--stagger:15vw;--img-w:250px}
+.gallery__slide:nth-child(11){--stagger:-24vw;--img-w:380px}
+.gallery__slide:nth-child(12){--stagger:26vw;--img-w:180px}
+
+.gallery__img-wrapper{
+  position:relative;
+  margin:0;
+  width:min(var(--img-w,240px),72vw);
+  aspect-ratio:0.8;
+  overflow:hidden;
+  background:var(--matte);
+}
+/* The same overhang composition the design system uses for in-flow images.
+   The overhang does double duty here: it supplies both the zoomed-in crop
+   and the head-room gallery.js's per-slide parallax drifts into, so one box
+   serves both jobs rather than a static transform plus a separate oversized
+   mask. Deliberately not gated behind prefers-reduced-motion — the crop is a
+   composition choice, not motion; only the drift that moves within it is.
+   24% overhang makes the image 148% of the wrapper's height, so the largest
+   --drift that never exposes an edge is 24 / 148 ≈ 16%; gallery.js's nominal
+   amplitude is 15. That ceiling is not restated in JS — driftCeiling() there
+   reads --overhang back off this rule and derives it, so retuning the overhang
+   here retunes the clamp with it and the two cannot drift out of agreement.
+   Which means --overhang must stay a percentage, as media.css also requires. */
+.gallery__img-wrapper img{
+  --overhang:24%;
+  --img-scale:1.08;
+  position:absolute;left:0;right:0;
+  top:calc(-1 * var(--overhang));
+  height:calc(100% + 2 * var(--overhang));
+  width:100%;
+  object-fit:cover;
+  transform:translate3d(0,var(--drift),0) scale(var(--img-scale));
+}
+.gallery__slide figcaption{
+  margin-top:var(--space-3);
+  text-align:center;
+}
+.gallery__slide:focus-visible .gallery__img-wrapper{
+  outline:var(--focus-ring);
+  outline-offset:4px;
+}
+
+@media(max-width:760px){
+  .gallery__track{gap:8vh}
+  .gallery__slide:nth-child(1){--stagger:-10vw;--img-w:220px}
+  .gallery__slide:nth-child(2){--stagger:8vw;--img-w:250px}
+  .gallery__slide:nth-child(3){--stagger:-6vw;--img-w:200px}
+  .gallery__slide:nth-child(4){--stagger:12vw;--img-w:280px}
+  .gallery__slide:nth-child(5){--stagger:-14vw;--img-w:230px}
+  .gallery__slide:nth-child(6){--stagger:16vw;--img-w:160px}
+  .gallery__slide:nth-child(7){--stagger:-8vw;--img-w:210px}
+  .gallery__slide:nth-child(8){--stagger:5vw;--img-w:240px}
+  .gallery__slide:nth-child(9){--stagger:-4vw;--img-w:200px}
+  .gallery__slide:nth-child(10){--stagger:10vw;--img-w:190px}
+  .gallery__slide:nth-child(11){--stagger:-12vw;--img-w:260px}
+  .gallery__slide:nth-child(12){--stagger:14vw;--img-w:160px}
+  .gallery__img-wrapper{width:min(var(--img-w,200px),68vw)}
+}
+
+@media(prefers-reduced-motion:reduce){
+  /* margin-top:0 — just agreeing with the base rule now, not overriding a
+     negative one. closeSeam() never runs without pins (there's no gap to
+     close), so with no pins at all here .work and .gallery are plain stacked
+     flow and 0 is already correct. */
+  .gallery{height:auto;overflow-x:hidden;overflow-y:visible;padding-block:var(--section-pad);margin-top:0}
+  .gallery__img-wrapper{visibility:visible !important;opacity:1 !important}
+}

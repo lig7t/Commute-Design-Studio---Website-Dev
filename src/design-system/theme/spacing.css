@@ -1,0 +1,29 @@
+:root{
+--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;
+--space-6:32px;--space-7:48px;--space-8:64px;--space-9:96px;--space-10:128px;
+--space-11:192px;--space-12:256px;
+
+--margin:clamp(20px,6vw,120px);
+--gutter:clamp(16px,1.4vw,28px); /* @kind spacing */
+--maxw:1680px;
+--columns:12; /* @kind other */
+
+--section-pad:clamp(96px,14vh,224px);
+--section-pad-tight:clamp(64px,9vh,128px);
+--gap-label-headline:24px;
+--gap-headline-copy:32px;
+--gap-copy-media:64px;
+--gap-media-rows:clamp(48px,6vw,96px);
+--gap-caption:12px;
+
+--radius:0px;
+--radius-pill:999px;
+--hairline:1px; /* @kind spacing */
+}
+
+/* ---------- 4 columns, 20px margin, 16px gutter ----------
+   Must stay after the :root block above — same specificity, so the
+   cascade order is what makes it win. */
+@media(max-width:760px){
+  :root{--columns:4;--margin:20px;--gutter:16px}
+}

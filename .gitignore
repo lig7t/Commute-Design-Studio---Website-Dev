@@ -1,0 +1,20 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+.vite/
+
+# editor / OS / tooling
+.DS_Store
+*.local
+*.log
+CLAUDE.md
+.claude/
+.vscode/
+.idea/
+
+# The source archive lives OUTSIDE this repo, at
+# ../commute-design-studio-source/ — raw photography, sketches, vectors,
+# references, moodboards and the written specs. Nothing to ignore here;
+# this note exists so the next person knows where it went.

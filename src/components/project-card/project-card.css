@@ -1,0 +1,84 @@
+/* ---------- Selected Work — detail card, Flip-morphed ---------- */
+
+.card{
+  display:none;
+  position:fixed;inset:0;
+  z-index:40;
+  overflow-y:auto;
+  background:var(--surface);
+}
+.card__panel{
+  position:relative;
+  max-width:var(--maxw);
+  margin:0 auto;
+  padding:var(--space-9) var(--margin) var(--space-9);
+  box-sizing:border-box;
+}
+.card__close{
+  position:sticky;top:var(--space-4);z-index:1;
+  display:inline-block;
+  margin-bottom:var(--space-6);
+  padding:var(--space-2) var(--space-3);
+  border:var(--hairline) solid var(--rule);
+  background:var(--surface);
+  color:var(--text-hi);
+  cursor:pointer;
+  transition:color var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out);
+}
+.card__close:hover{border-color:var(--accent-live);color:var(--accent)}
+
+/* The project name, and nothing else — the card carries no discipline,
+   description, location or year. It sits above .card__top so the two image
+   columns below can be a clean pair. */
+.card__meta{margin-bottom:var(--space-6)}
+.card__meta .ds-headline{margin:0;text-transform:uppercase}
+
+/* Hero left, the project's remaining images right. align-items:stretch is
+   load-bearing: it is what gives .card__sidebar the row's height for the
+   grid to fill. */
+.card__top{
+  display:grid;
+  grid-template-columns:3fr 2fr;
+  gap:var(--gutter) calc(var(--gutter) * 2);
+  align-items:stretch;
+}
+
+/* The ratio lives on the FIGURE, not on the .ds-media inside it, and that is
+   the whole reason the morph doesn't tear: Flip runs with absolute:true, so
+   .ds-media leaves the flow for the duration of every open and close. A
+   figure with no height of its own collapses to zero the moment that starts,
+   taking the row — and the sidebar height the grid is sized from — with it;
+   the thumbnails would fade in against a collapsed column and snap open when
+   the morph landed. Declared once here so nothing has to be kept in sync. */
+.card__media{margin:0;aspect-ratio:0.8}
+.card__media .ds-media{height:100%}
+.card__media img{width:100%;height:100%;object-fit:cover;display:block}
+
+/* The grid is taken out of flow deliberately. Villa Malaguti carries sixteen
+   secondary images; in flow they would stretch the row and drag the hero to
+   sixteen thumbnails tall. Out of flow the row is the hero's height alone,
+   and inset:0 hands the grid exactly that height to scroll inside — so the
+   scroll box is never a number restated from the hero's ratio. */
+.card__sidebar{position:relative;min-height:0}
+.card__grid{
+  position:absolute;inset:0;
+  overflow-y:auto;
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  align-content:start;
+  gap:var(--gutter);
+}
+.card__grid figure{margin:0}
+.card__grid .ds-media{aspect-ratio:0.8}
+.card__grid img{width:100%;height:100%;object-fit:cover;display:block}
+
+@media(max-width:1024px){
+  /* Stacked, so there is no hero column beside the grid to take a height
+     from: it goes back in flow and grows to fit, and the page scrolls it. */
+  .card__top{grid-template-columns:1fr;gap:var(--space-6)}
+  .card__sidebar{position:static}
+  .card__grid{position:static;overflow-y:visible;grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:760px){
+  .card__grid{grid-template-columns:repeat(2,1fr)}
+}

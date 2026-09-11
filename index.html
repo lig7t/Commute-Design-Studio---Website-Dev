@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Commute Design Studio — Interiors and lighting, Toronto</title>
+<meta name="description" content="Commute Design Studio. Interiors and objects defined by clarity, restraint, and the tactile beauty of craft.">
+<meta name="theme-color" content="#F1EFE3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1D1117" media="(prefers-color-scheme: dark)">
+
+<!-- Set CANONICAL_ORIGIN to the production domain once it is registered;
+     og:url and og:image must both be absolute for link previews to resolve. -->
+<link rel="canonical" href="https://commute.studio/">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Commute Design Studio">
+<meta property="og:title" content="Commute Design Studio — Interiors and lighting, Toronto">
+<meta property="og:description" content="Interiors and objects defined by clarity, restraint, and the tactile beauty of craft.">
+<meta property="og:url" content="https://commute.studio/">
+<meta property="og:image" content="https://commute.studio/images/works/full/008.webp">
+<meta property="og:image:alt" content="Artisanal plaster texture study by Commute Design Studio.">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Commute Design Studio — Interiors and lighting, Toronto">
+<meta name="twitter:description" content="Interiors and objects defined by clarity, restraint, and the tactile beauty of craft.">
+<meta name="twitter:image" content="https://commute.studio/images/works/full/008.webp">
+
+<link rel="icon" href="/favicon.png" type="image/png">
+
+<!-- Linked rather than imported from main.js on purpose: Vite bundles both,
+     but the JS-import form injects styles via script in dev, which flashes
+     unstyled content on first paint. A <link> keeps first paint identical
+     in dev and production alike. -->
+<link rel="stylesheet" href="/src/main.css">
+
+<!-- Resolve the surface before first paint so the page never flashes. -->
+<script>
+  try {
+    var t = localStorage.getItem('commute:theme');
+    if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
+
+<script type="module" src="/src/main.js"></script>
+</head>
+
+<body>
+<a class="ds-skip" href="#main">Skip to content</a>
+
+<!-- ===== Navigation — wordmark left, four links right, pill toggle ===== -->
+<header class="ds-nav">
+  <div class="ds-nav__inner">
+    <a class="ds-wordmark" href="#main">Commute</a>
+
+    <nav aria-label="Primary">
+      <ul class="ds-nav__links">
+        <li><a class="ds-navlink" href="#work"     data-section="work">Interiors</a></li>
+        <li><a class="ds-navlink" href="#about" data-section="about">About Us</a></li>
+        <li><a class="ds-navlink" href="#contact"  data-section="contact">Contact</a></li>
+      </ul>
+    </nav>
+
+    <span class="ds-toggle" role="group" aria-label="Theme">
+      <button class="ds-toggle__btn" type="button" data-theme-option="light" aria-pressed="true">Stone beige</button>
+      <button class="ds-toggle__btn" type="button" data-theme-option="dark" aria-pressed="false">Velvet teal</button>
+    </span>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ===== Stage — hero and interiors share the same viewport ===== -->
+  <div class="stage">
+
+    <!-- ===== Hero — the wordmark held inside a receding reel of work ===== -->
+    <section class="hero" aria-labelledby="h-hero">
+
+      <div class="hero__reel" data-reel aria-hidden="true">
+        <canvas data-reel-canvas></canvas>
+
+        <div class="hero__still">
+          <figure><div class="ds-media" data-ratio="16:9"><img src="/images/works/reel/069.webp" alt="" loading="lazy" decoding="async"></div></figure>
+          <figure><div class="ds-media" data-ratio="16:9"><img src="/images/works/reel/012.webp" alt="" loading="lazy" decoding="async"></div></figure>
+          <figure><div class="ds-media" data-ratio="16:9"><img src="/images/works/reel/081.webp" alt="" loading="eager" decoding="async"></div></figure>
+          <figure><div class="ds-media" data-ratio="16:9"><img src="/images/works/reel/008.webp" alt="" loading="lazy" decoding="async"></div></figure>
+          <figure><div class="ds-media" data-ratio="16:9"><img src="/images/works/reel/072.webp" alt="" loading="lazy" decoding="async"></div></figure>
+        </div>
+      </div>
+
+      <div class="hero__type">
+        <h1 class="ds-display hero__mark" id="h-hero">Commute</h1>
+        <p class="hero__sub">Design Studio</p>
+        <!-- <p class="ds-body hero__lede">Interiors and objects defined by clarity, restraint, and the
+          tactile beauty of craft.</p> -->
+      </div>
+
+      <!-- <div class="hero__reg" aria-hidden="true"><span class="ds-reg"></span></div> -->
+    </section>
+
+    <!-- ===== 02 // Interiors — slides in from the left, style 1 editorial grid ===== -->
+    <section class="work" id="work" aria-labelledby="h-work">
+      <div class="work__inner">
+
+        <header class="work__head">
+          <p class="ds-meta" data-in="left">Studio Philosophy</p>
+          <h2 class="ds-display work__title" id="h-work" data-in="left">The Tactile Beauty<br>of Craft.</h2>
+          <!-- <p class="ds-body work__subtitle" data-in="up">Our process: from concept to site specificity.</p> -->
+        </header>
+
+        <div class="work__composition">
+
+          <figure class="work__img work__img--large" data-in="left">
+            <div class="ds-media" data-hover="true">
+              <img src="/images/works/full/008.webp" data-parallax
+                   alt="Alo — artisanal plaster texture study by Commute Design Studio." loading="eager" decoding="async">
+            </div>
+            <figcaption class="ds-micro">Artisanal plaster // Texture study</figcaption>
+          </figure>
+
+          <figure class="work__img work__img--mid1" data-in="up">
+            <div class="ds-media" data-hover="true">
+              <img src="/images/works/full/003.webp" data-parallax
+                   alt="Custom millwork — joinery detail." loading="eager" decoding="async">
+            </div>
+          </figure>
+
+          <figure class="work__img work__img--mid2" data-in="up">
+            <div class="ds-media" data-hover="true">
+              <img src="/images/works/full/081.webp" data-parallax
+                   alt="Oretta — brass fabrication, patina and form." loading="eager" decoding="async">
+            </div>
+            <figcaption class="ds-micro">Brass fabrication // Patina &amp; form</figcaption>
+          </figure>
+
+          <div class="work__right" data-in="right">
+            <div class="work__statement">
+              <p class="ds-headline">We believe in the integrity of raw materials, shaped with intention and longevity.</p>
+              <hr class="ds-rule">
+            </div>
+            <div class="work__pair">
+              <figure class="work__img">
+                <div class="ds-media" data-hover="true">
+                  <img src="/images/works/full/069.webp" data-parallax
+                       alt="Midtown Azurra — textile weave analysis." loading="lazy" decoding="async">
+                </div>
+                <figcaption class="ds-micro">Textile // Weave analysis</figcaption>
+              </figure>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+  </div>
+  <!-- ===== /stage ===== -->
+
+  <!-- ===== Selected Work — infinite scroll gallery ===== -->
+  <section class="gallery" data-gallery aria-label="Selected work">
+    <div class="gallery__track"></div>
+  </section>
+
+  <!-- ===== Selected Work — detail card, Flip-morphed from a slide ===== -->
+  <div class="card" data-card aria-hidden="true">
+    <div class="card__panel" role="dialog" aria-modal="true" aria-labelledby="card-title">
+      <button class="card__close ds-micro" type="button" data-card-close aria-label="Close project">Close</button>
+
+      <div class="card__meta">
+        <h2 class="ds-headline" id="card-title" data-card-title></h2>
+      </div>
+
+      <div class="card__top">
+        <figure class="card__media">
+          <div class="ds-media"><img data-card-image alt=""></div>
+        </figure>
+
+        <div class="card__sidebar">
+          <div class="card__grid" data-card-grid></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 03 // About Us ===== -->
+  <section class="about" id="about" aria-labelledby="h-about">
+    <div class="about__inner">
+      <p class="ds-meta ds-gap-label" data-in="down">About Us</p>
+
+      <div class="ds-grid about__grid">
+        <div class="about__copy" data-in-group>
+          <h2 class="ds-headline" id="h-about" data-in="left">Clarity, restraint, and craft.</h2>
+          <p class="ds-body ds-gap-copy" data-in="up">Commute Design Studio creates interiors and objects defined by clarity, restraint, and the tactile beauty of craft. Working internationally, we bring a material-driven sensibility to hospitality, residential, and commercial environments&mdash;spaces shaped with intention and longevity.</p>
+          <p class="ds-body" style="margin-top:var(--gap-headline-copy)" data-in="up">In parallel, we founded Studio Parisotto + Samad, a complementary practice dedicated to sculptural editions and art-based interventions. Together, the two studios offer a singular point of view: design as a continuum&mdash;where interiors, art, and objects speak the same quiet, disciplined language.</p>
+        </div>
+
+        <figure class="about__portrait" data-in="right">
+          <div class="ds-media">
+            <img src="/images/works/full/about.png" data-parallax="30"
+                 alt="Founders of Commute Design Studio." loading="lazy" decoding="async">
+          </div>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 06 // Contact — one line, one address, one hairline ===== -->
+  <section class="ds-section" id="contact" aria-labelledby="h-contact">
+    <p class="ds-meta ds-gap-label" data-in="down">Contact</p>
+
+    <div class="ds-grid">
+      <div class="contact__inner" data-in-group>
+        <h2 class="ds-headline" id="h-contact" data-in="left">New work, new rooms.</h2>
+        <p style="margin:var(--gap-headline-copy) 0 var(--gap-copy-media)" data-in="up">
+          <a class="contact__mail" href="mailto:studio@commute.studio">studio@commute.studio</a>
+        </p>
+        <hr class="ds-rule" data-in="up">
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <!-- No [data-in] here on purpose: the footer row sits inside the final
+       viewport, so it can never cross a reveal threshold — it is simply
+       present once you reach the bottom. -->
+  <div class="foot__row">
+    <span class="ds-wordmark">Commute</span>
+    <p class="ds-micro">Toronto, ON</p>
+    <p class="ds-micro">Interior design &amp; lighting</p>
+    <p class="ds-micro">&copy; 2026</p>
+  </div>
+</footer>
+
+</body>
+</html>

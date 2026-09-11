@@ -1,0 +1,4 @@
+/* Archivo variable — weight 100–900, width 62–125. Served from Google Fonts.
+   Premium drop-in upgrade path (no metric change): Söhne, Neue Haas Grotesk Display, Suisse Int'l. */
+@import url("https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap");
+:root{--font:"Archivo","Helvetica Neue",Helvetica,Arial,sans-serif;--font-core:var(--font);--font-display:var(--font);--font-meta:var(--font)}

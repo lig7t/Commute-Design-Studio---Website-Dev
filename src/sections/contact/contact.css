@@ -1,0 +1,23 @@
+/* ---------- 04 // contact — one line, one address, one hairline ---------- */
+
+.contact__inner{grid-column:1 / span 8}
+.contact__mail{
+  display:inline-block;
+  font-size:var(--size-headline);
+  font-weight:var(--weight-structural);
+  letter-spacing:var(--track-headline);
+  padding-bottom:2px;
+  border-bottom-width:2px;
+}
+
+/* ---------- narrow ----------
+   Must stay after the base rule above — same specificity. */
+
+@media(max-width:1024px){
+  .contact__inner{grid-column:1 / span 11}
+}
+
+@media(max-width:760px){
+  .contact__inner{grid-column:1 / -1}
+  .contact__mail{font-size:clamp(1rem,5vw,var(--size-title))}
+}

@@ -1,0 +1,24 @@
+/* ---------- ThemeToggle — the one 999px radius in the system ---------- */
+
+.ds-toggle{
+  display:inline-flex;gap:2px;
+  border:var(--hairline) solid var(--rule);
+  border-radius:var(--radius-pill);
+  padding:3px;
+}
+.ds-toggle__btn{
+  border:0;border-radius:var(--radius-pill);
+  background:transparent;color:var(--text-lo);
+  font:inherit;font-size:var(--size-micro);
+  letter-spacing:0.1em;text-transform:uppercase;
+  padding:7px 16px;min-height:30px;cursor:pointer;
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+/* pressed is a held state, not a transient */
+.ds-toggle__btn[aria-pressed="true"]{background:var(--text-hi);color:var(--surface)}
+
+/* ---------- narrow ----------
+   After the base rule above, which it overrides at equal specificity. */
+@media(max-width:760px){
+  .ds-toggle__btn{padding:7px 10px}
+}

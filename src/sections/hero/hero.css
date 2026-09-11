@@ -1,0 +1,85 @@
+/* ---------- stage — hero and interiors share one viewport ---------- */
+
+.stage{
+  position:relative;
+  height:100vh;height:100svh;
+  overflow:hidden;
+}
+
+/* With motion off there is no pin, so the stage must collapse to its
+   content and let hero and work stack in normal flow. Must stay after the
+   base rule above — same specificity. */
+@media(prefers-reduced-motion:reduce){
+  .stage{height:auto;overflow:visible}
+}
+
+/* ---------- hero — the wordmark held inside the reel ---------- */
+
+.hero{
+  position:relative;
+  width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+}
+
+.hero__reel{position:absolute;inset:0;z-index:0}
+.hero__reel canvas{display:block;width:100%;height:100%}
+
+.hero__type{
+  position:relative;z-index:1;
+  text-align:center;
+  padding-inline:var(--margin);
+  will-change:transform,opacity;
+  display: flex;
+  height: 200px;
+  flex-wrap: wrap;
+}
+.hero__mark{text-transform:uppercase}
+.hero__sub{
+  font-size:clamp(1.5rem,3.4vw,3rem);
+  font-weight:var(--weight-body);
+  letter-spacing:var(--track-headline);
+  line-height:1.05;
+  color:var(--text-hi);
+  text-transform:uppercase;
+  margin:var(--space-2) 0 var(--space-5);
+}
+.hero__lede{max-width:34ch;margin:0 auto}
+
+.hero__reg{position:absolute;right:var(--margin);bottom:18%;z-index:1}
+.hero__reg .ds-reg{width:26px;height:26px}
+.hero__reg .ds-reg::before{left:12px;height:26px}
+.hero__reg .ds-reg::after{top:12px;width:26px}
+
+/* ---------- static strip ---------- */
+
+.hero__still{
+  position:absolute;inset:0;z-index:0;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  perspective:1200px;
+}
+[data-reel="live"] .hero__still{display:none}
+
+.hero__still figure{
+  margin:0;width:clamp(160px,20vw,320px);
+}
+.hero__still .ds-media{border:0}
+.hero__still figure:nth-child(1){transform:rotateY(38deg) translateZ(-90px);opacity:.24}
+.hero__still figure:nth-child(2){transform:rotateY(22deg) translateZ(-30px);opacity:.5}
+.hero__still figure:nth-child(3){transform:none;opacity:1}
+.hero__still figure:nth-child(4){transform:rotateY(-22deg) translateZ(-30px);opacity:.5}
+.hero__still figure:nth-child(5){transform:rotateY(-38deg) translateZ(-90px);opacity:.24}
+
+/* ---------- narrow ---------- */
+
+@media(max-width:760px){
+  .hero__reg{display:none}
+  .hero__still figure:nth-child(1),
+  .hero__still figure:nth-child(5){display:none}
+}
+
+/* Without the pin there is no sized stage to fill, so the hero claims the
+   viewport itself. After the base rule above — same specificity. */
+@media(prefers-reduced-motion:reduce){
+  .hero{height:100svh}
+}

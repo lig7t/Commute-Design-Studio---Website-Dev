@@ -1,0 +1,31 @@
+/* ---------- StructuralList ---------- */
+
+.ds-list{list-style:none;padding:0;margin:0}
+.ds-list li{
+  display:grid;grid-template-columns:1fr auto;
+  gap:var(--gutter);align-items:baseline;
+  padding-block:14px;
+  border-top:var(--hairline) solid var(--rule);
+}
+.ds-list--numbered li{grid-template-columns:44px 1fr auto}
+.ds-list li:last-child{border-bottom:var(--hairline) solid var(--rule)}
+.ds-list__no{
+  font-size:var(--size-micro);letter-spacing:var(--track-micro);
+  color:var(--stone);font-variant-numeric:tabular-nums;
+}
+.ds-list__label{color:var(--text-mid)}
+.ds-list__meta{
+  font-size:var(--size-micro);letter-spacing:var(--track-micro);
+  text-transform:uppercase;color:var(--text-lo);
+}
+
+/* ---------- narrow ----------
+   Order inside this block matters as much as its position after the base
+   rules: .ds-list li resets to one column, then .ds-list--numbered li
+   re-adds the numeral track. */
+@media(max-width:760px){
+  .ds-list li{grid-template-columns:1fr}
+  .ds-list--numbered li{grid-template-columns:32px 1fr}
+  .ds-list__meta{grid-column:1 / -1}
+  .ds-list--numbered .ds-list__meta{grid-column:2 / -1}
+}
