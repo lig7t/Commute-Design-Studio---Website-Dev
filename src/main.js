@@ -17,7 +17,12 @@ import { armChoreography, mountChoreography } from './lib/reveal.js';
 import { mountParallax } from './lib/parallax.js';
 
 import { mountThemeToggle } from './components/theme-toggle/theme-toggle.js';
-import { mountNavHeight, mountNav, mountAnchors } from './components/navigation/navigation.js';
+import {
+  mountNavHeight,
+  mountNav,
+  mountAnchors,
+  mountDrawer,
+} from './components/navigation/navigation.js';
 
 import { mountReel, closeSeam, pickHeroFrames } from './sections/hero/hero.js';
 import { initGallery } from './sections/gallery/gallery.js';
@@ -28,6 +33,7 @@ mountMedia();
 mountNavHeight();
 mountNav();
 mountAnchors();
+mountDrawer();
 armChoreography();
 
 loadWorks().then(async (works) => {

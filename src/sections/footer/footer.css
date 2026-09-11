@@ -2,7 +2,7 @@
 
 .foot{
   max-width:var(--maxw);margin-inline:auto;padding-inline:var(--margin);
-  padding-block:var(--space-9) var(--space-8);
+  padding-block:var(--space-9) max(var(--space-8), env(safe-area-inset-bottom, 0px));
   border-top:var(--hairline) solid var(--rule);
 }
 .foot__row{display:flex;justify-content:space-between;gap:var(--space-5);flex-wrap:wrap}
@@ -10,5 +10,5 @@
 /* ---------- narrow ---------- */
 
 @media(max-width:760px){
-  .foot__row{gap:var(--space-3)}
+  .foot__row{flex-direction:column;align-items:flex-start;gap:var(--space-3)}
 }

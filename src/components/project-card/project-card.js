@@ -45,8 +45,13 @@ export class Card {
     this.tl = null;
     this.state = 'closed'; // closed | opening | open | closing
 
+    this.panel = this.root.querySelector('.card__panel');
+
     this.root.querySelectorAll('[data-card-close]').forEach((btn) => {
       btn.addEventListener('click', () => this.close());
+    });
+    this.root.addEventListener('click', (e) => {
+      if (e.target === this.root || e.target === this.panel) this.close();
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') this.close();

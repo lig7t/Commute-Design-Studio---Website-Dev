@@ -74,4 +74,88 @@ export function mountNav() {
   sections.forEach((s) => io.observe(s));
 }
 
-/* mountNavHide removed — nav is always visible (position:fixed, z-index:20). */
+export function mountDrawer() {
+  const burger = document.querySelector('[data-nav-burger]');
+  const drawer = document.querySelector('[data-nav-drawer]');
+  if (!burger || !drawer) return;
+
+  const backdrop = drawer.querySelector('[data-drawer-backdrop]');
+  const panel = drawer.querySelector('.ds-drawer__panel');
+  const links = drawer.querySelectorAll('.ds-drawer__link');
+  const socialLinks = drawer.querySelectorAll('.ds-drawer__social-link');
+  const toggle = drawer.querySelector('.ds-toggle--drawer');
+  let isOpen = false;
+  const mq = matchMedia('(max-width:760px)');
+
+  const rule = drawer.querySelector('.ds-drawer__rule');
+  const staggerEls = [rule, toggle, ...socialLinks].filter(Boolean);
+
+  const arm = () => {
+    gsap.set(backdrop, { autoAlpha: 0 });
+    gsap.set(panel, { autoAlpha: 0 });
+    gsap.set(links, { autoAlpha: 0, y: 20 });
+    gsap.set(staggerEls, { autoAlpha: 0, y: 12 });
+  };
+  if (mq.matches) arm();
+
+  const open = () => {
+    if (isOpen) return;
+    isOpen = true;
+    drawer.setAttribute('aria-hidden', 'false');
+    burger.setAttribute('aria-expanded', 'true');
+    burger.setAttribute('aria-label', 'Close menu');
+    document.documentElement.style.overflow = 'hidden';
+
+    gsap.set(drawer, { pointerEvents: 'auto' });
+    gsap.to(backdrop, { autoAlpha: 1, duration: 0.4, ease: 'power2.out' });
+    gsap.set(panel, { autoAlpha: 1 });
+    gsap.to(links, {
+      autoAlpha: 1,
+      y: 0,
+      duration: 0.5,
+      stagger: 0.07,
+      delay: 0.15,
+      ease: 'power3.out',
+    });
+    gsap.to(staggerEls, {
+      autoAlpha: 1,
+      y: 0,
+      duration: 0.45,
+      stagger: 0.06,
+      delay: 0.35,
+      ease: 'power3.out',
+    });
+  };
+
+  const close = () => {
+    if (!isOpen) return;
+    isOpen = false;
+    drawer.setAttribute('aria-hidden', 'true');
+    burger.setAttribute('aria-expanded', 'false');
+    burger.setAttribute('aria-label', 'Open menu');
+    document.documentElement.style.overflow = '';
+
+    gsap.to(backdrop, {
+      autoAlpha: 0,
+      duration: 0.3,
+      ease: 'power2.in',
+      onComplete: () => {
+        gsap.set(panel, { autoAlpha: 0 });
+        gsap.set(links, { autoAlpha: 0, y: 20 });
+        gsap.set(staggerEls, { autoAlpha: 0, y: 12 });
+        gsap.set(drawer, { pointerEvents: 'none' });
+      },
+    });
+  };
+
+  burger.addEventListener('click', () => (isOpen ? close() : open()));
+
+  backdrop?.addEventListener('click', close);
+
+  links.forEach((link) => link.addEventListener('click', () => close()));
+  socialLinks.forEach((link) => link.addEventListener('click', () => close()));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isOpen) close();
+  });
+}

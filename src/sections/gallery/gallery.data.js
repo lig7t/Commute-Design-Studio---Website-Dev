@@ -18,9 +18,9 @@
        [g.setdefault(e['project'],[]).append(e['id']) for e in d]; \
        [print(k, v) for k,v in g.items()]"
 
-   Twelve projects is load-bearing, not incidental: gallery.css sizes and
-   staggers the column with nth-child rules written against twelve slides.
-   A thirteenth project in works.json needs those rules revisited.
+   Eleven projects currently; gallery.css has nth-child rules for up to twelve
+   slides. Adding a twelfth re-uses the existing 12th rule; a thirteenth
+   needs those rules revisited.
 
    Shape:
      { id, title, discipline,
@@ -44,13 +44,10 @@ const DISCIPLINES = [
 /* [ project title, [every image id for it, in works.json order] ].
 
    The first id is the slide thumbnail and the card's hero; the rest fill the
-   card's grid. Note that 'Alo Restaurant' has exactly one image in
-   works.json, so its galleryImages is empty and its card shows a hero with
-   an empty grid beside it. That is what the manifest currently holds, not a
-   transcription slip. */
+   card's grid. */
 const SOURCES = [
-  ["Number's Residence", ['001', '002', '003', '004', '005', '006', '007', '016', '075', '076']],
-  ['Alo Restaurant', ['008']],
+  ["Number's Residence", ['001', '002', '003', '004', '005', '006', '007', '075', '076']],
+  ['Alo Restaurant', ['008', '016', '077', '078', '079', '080', '081']],
   ['Oretta King', ['009', '010', '011', '012', '013', '014', '015']],
   ['Oretta Downtown', ['017', '029', '030']],
   ['Aloette', ['018', '041', '042', '043', '044']],
@@ -65,7 +62,6 @@ const SOURCES = [
   ],
   ["Porzia's", ['062', '063', '064', '065', '066', '067', '068', '069']],
   ['Salon', ['070', '071', '072', '073', '074']],
-  ['Oretta', ['077', '078', '079', '080', '081']],
 ];
 
 const full = (id) => `images/works/full/${id}.webp`;

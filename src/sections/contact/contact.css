@@ -1,9 +1,10 @@
 /* ---------- 04 // contact — one line, one address, one hairline ---------- */
 
 .contact__inner{grid-column:1 / span 8}
+.contact__inner .ds-rule{border-color:transparent;margin-top:var(--space-4)}
 .contact__mail{
   display:inline-block;
-  font-size:var(--size-headline);
+  font-size:clamp(2rem,5vw,4rem);
   font-weight:var(--weight-structural);
   letter-spacing:var(--track-headline);
   padding-bottom:2px;
@@ -19,5 +20,5 @@
 
 @media(max-width:760px){
   .contact__inner{grid-column:1 / -1}
-  .contact__mail{font-size:clamp(1rem,5vw,var(--size-title))}
+  .contact__mail{font-size:clamp(1.25rem,5vw,2rem);word-break:break-all}
 }

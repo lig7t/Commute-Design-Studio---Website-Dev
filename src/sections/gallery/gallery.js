@@ -592,6 +592,51 @@ class Gallery {
   }
 }
 
+/* ---------- mobile gallery (no loop, no pin) ----------
+   On narrow viewports the infinite scroll is replaced by a plain vertical
+   stack that the reader scrolls through naturally. Each slide still gets the
+   reveal entrance and the per-image parallax drift — only the recycling loop
+   and the pinned scrub are dropped, so the gallery lives in normal document
+   flow. */
+
+function initMobileGallery(section, slides) {
+  const firstImg = slides[0]?.querySelector('.gallery__img-wrapper img');
+  const ceiling = driftCeiling(firstImg);
+  const clamp = gsap.utils.clamp(-ceiling, ceiling);
+  const opacityRamp = gsap.utils.clamp(0, 1);
+
+  slides.forEach((slide) => {
+    const wrapper = slide.querySelector('.gallery__img-wrapper');
+    const img = slide.querySelector('.gallery__img-wrapper img');
+    const chars = splitChars(slide.querySelector('figcaption'));
+
+    gsap.set(wrapper, { autoAlpha: 0 });
+    gsap.set(chars, { autoAlpha: 0 });
+
+    ScrollTrigger.create({
+      trigger: slide,
+      start: 'top bottom',
+      end: 'bottom top',
+      onUpdate: (self) => {
+        const p = self.progress;
+        // Fade in: 0 opacity until 8% progress, full opacity at 28%.
+        // Fade out: full until 75%, gone by 92%.
+        const fadeIn = opacityRamp((p - 0.08) / 0.2);
+        const fadeOut = opacityRamp((0.92 - p) / 0.17);
+        const alpha = Math.min(fadeIn, fadeOut);
+
+        gsap.set(wrapper, { autoAlpha: alpha });
+        gsap.set(chars, { autoAlpha: alpha });
+
+        if (!img) return;
+        const norm = p - 0.5;
+        const drift = Math.round(clamp(-norm * 2 * GAL_DRIFT) * 100) / 100;
+        img.style.setProperty('--drift', `${drift}%`);
+      },
+    });
+  });
+}
+
 /* ---------- init ---------- */
 
 /** Click / tap / Enter / Space -> Flip card. Used by the animated AND the
@@ -644,6 +689,14 @@ export function initGallery() {
   // still opens on demand.
   if (reduced || !gsap || !ScrollTrigger) {
     if (gsap) gsap.set(section.querySelectorAll('.gallery__img-wrapper'), { autoAlpha: 1 });
+    if (canCard) wireCard(slides);
+    else stripSlideAffordances(slides);
+    return null;
+  }
+
+  const isMobile = window.matchMedia('(max-width: 760px)').matches;
+  if (isMobile) {
+    initMobileGallery(section, slides);
     if (canCard) wireCard(slides);
     else stripSlideAffordances(slides);
     return null;

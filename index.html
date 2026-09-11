@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Commute Design Studio — Interiors and lighting, Toronto</title>
 <meta name="description" content="Commute Design Studio. Interiors and objects defined by clarity, restraint, and the tactile beauty of craft.">
 <meta name="theme-color" content="#F1EFE3" media="(prefers-color-scheme: light)">
@@ -61,12 +61,41 @@
       </ul>
     </nav>
 
-    <span class="ds-toggle" role="group" aria-label="Theme">
+    <span class="ds-toggle ds-toggle--bar" role="group" aria-label="Theme">
       <button class="ds-toggle__btn" type="button" data-theme-option="light" aria-pressed="true">Stone beige</button>
       <button class="ds-toggle__btn" type="button" data-theme-option="dark" aria-pressed="false">Velvet teal</button>
     </span>
+
+    <button class="ds-nav__burger" type="button" aria-label="Open menu" aria-expanded="false" data-nav-burger>
+      <span class="ds-nav__burger-line"></span>
+      <span class="ds-nav__burger-line"></span>
+      <span class="ds-nav__burger-line"></span>
+    </button>
   </div>
 </header>
+
+<div class="ds-drawer" data-nav-drawer aria-hidden="true">
+  <div class="ds-drawer__backdrop" data-drawer-backdrop></div>
+  <div class="ds-drawer__panel" role="dialog" aria-label="Navigation menu">
+    <span class="ds-toggle ds-toggle--drawer" role="group" aria-label="Theme">
+      <button class="ds-toggle__btn" type="button" data-theme-option="light" aria-pressed="true">Stone beige</button>
+      <button class="ds-toggle__btn" type="button" data-theme-option="dark" aria-pressed="false">Velvet teal</button>
+    </span>
+    <hr class="ds-drawer__rule">
+    <nav aria-label="Primary mobile">
+      <ul class="ds-drawer__links">
+        <li><a class="ds-drawer__link" href="#work" data-section="work">Interiors</a></li>
+        <li><a class="ds-drawer__link" href="#about" data-section="about">About us</a></li>
+        <li><a class="ds-drawer__link" href="#contact" data-section="contact">Contact</a></li>
+      </ul>
+    </nav>
+    <ul class="ds-drawer__social">
+      <li><a class="ds-drawer__social-link" href="https://instagram.com/" target="_blank" rel="noopener">Instagram</a></li>
+      <li><a class="ds-drawer__social-link" href="https://facebook.com/" target="_blank" rel="noopener">Facebook</a></li>
+      <li><a class="ds-drawer__social-link" href="https://linkedin.com/" target="_blank" rel="noopener">LinkedIn</a></li>
+    </ul>
+  </div>
+</div>
 
 <main id="main">
 

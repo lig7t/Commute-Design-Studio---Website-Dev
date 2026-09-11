@@ -125,13 +125,16 @@
 
 @media(max-width:760px){
   .work__composition{
-    grid-template-columns:1fr 1fr;
-    gap:8px;
+    grid-template-columns:1fr;
+    gap:6px;
   }
-  .work__img--large{grid-column:1 / -1;grid-row:auto}
-  .work__img--mid1{padding-top:0;align-self:start}
-  .work__img--mid2{grid-column:auto;grid-row:auto;padding-top:0}
-  .work__right{grid-column:1 / -1;grid-row:auto}
+  .work__title{font-size:clamp(1.5rem,6vw,2.25rem)}
+  .work__img--large{grid-column:1;grid-row:auto}
+  .work__img--mid1{grid-column:1;grid-row:auto;padding-top:0}
+  .work__img--mid2{grid-column:1;grid-row:auto;padding-top:0}
+  .work__right{grid-column:1;grid-row:auto}
+  .work__pair{flex:1;min-height:0}
+  .work__statement .ds-headline{font-size:clamp(0.8rem,3vw,1rem)}
 }
 
 /* With motion off there is no pin and no hero->interiors morph, so the two

@@ -30,9 +30,7 @@
   text-align:center;
   padding-inline:var(--margin);
   will-change:transform,opacity;
-  display: flex;
-  height: 200px;
-  flex-wrap: wrap;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
 }
 .hero__mark{text-transform:uppercase}
 .hero__sub{
@@ -76,6 +74,7 @@
   .hero__reg{display:none}
   .hero__still figure:nth-child(1),
   .hero__still figure:nth-child(5){display:none}
+  .hero__sub{font-size:clamp(0.875rem,3.8vw,1.25rem);letter-spacing:var(--track-meta)}
 }
 
 /* Without the pin there is no sized stage to fill, so the hero claims the

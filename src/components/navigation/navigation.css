@@ -19,6 +19,7 @@
   -webkit-backdrop-filter:blur(24px) saturate(1.6);
   backdrop-filter:blur(24px) saturate(1.6);
   border-bottom:var(--hairline) solid var(--rule);
+  padding-top:env(safe-area-inset-top, 0px);
   transition:background var(--dur-base) var(--ease-out),
              border-color var(--dur-base) var(--ease-out);
 }
@@ -56,13 +57,112 @@
 }
 .ds-skip:focus{top:var(--space-3)}
 
+/* ---------- hamburger button (mobile only) ---------- */
+
+.ds-nav__burger{
+  display:none;
+  flex-direction:column;align-items:center;justify-content:center;
+  gap:5px;
+  width:44px;height:44px;
+  border:none;
+  background:transparent;cursor:pointer;
+  padding:0;flex-shrink:0;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+.ds-nav__burger-line{
+  display:block;
+  width:18px;height:1.5px;
+  background:var(--text-hi);
+  transition:transform var(--dur-base) var(--ease-out),opacity var(--dur-fast) var(--ease-out);
+  pointer-events:none;
+}
+.ds-nav__burger[aria-expanded="true"] .ds-nav__burger-line:first-child{
+  transform:translateY(6.5px) rotate(45deg);
+}
+.ds-nav__burger[aria-expanded="true"] .ds-nav__burger-line:nth-child(2){
+  opacity:0;
+}
+.ds-nav__burger[aria-expanded="true"] .ds-nav__burger-line:last-child{
+  transform:translateY(-6.5px) rotate(-45deg);
+}
+
+/* ---------- mobile drawer ---------- */
+
+.ds-drawer{
+  display:none;
+  position:fixed;inset:0;z-index:19;
+  pointer-events:none;
+}
+
+.ds-drawer__backdrop{
+  position:absolute;inset:0;
+  background:color-mix(in srgb, var(--surface) 92%, transparent);
+  -webkit-backdrop-filter:blur(24px) saturate(1.6);
+  backdrop-filter:blur(24px) saturate(1.6);
+}
+
+.ds-drawer__panel{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  padding:calc(var(--nav-h,52px) + var(--space-4)) var(--margin) var(--space-7);
+  padding-bottom:max(var(--space-7), env(safe-area-inset-bottom, 0px));
+}
+
+.ds-drawer__links{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0}
+.ds-drawer__link{
+  display:block;
+  font-size:clamp(2rem,8vw,3rem);
+  font-weight:var(--weight-structural);
+  letter-spacing:var(--track-headline);
+  color:var(--text-hi);
+  text-decoration:none;
+  border-bottom:0;
+  padding:var(--space-3) 0;
+  line-height:1.15;
+  transition:color var(--dur-fast) var(--ease-out);
+}
+.ds-drawer__link:hover{color:var(--accent)}
+
+.ds-drawer__rule{
+  border:none;
+  border-top:var(--hairline) solid var(--rule);
+  margin:var(--space-4) 0 var(--space-9);
+}
+
+.ds-toggle--drawer{align-self:flex-start}
+.ds-toggle--drawer .ds-toggle__btn{min-height:44px;padding-block:12px}
+
+.ds-drawer__social{
+  list-style:none;margin:0;padding:0;
+  display:flex;flex-direction:column;
+  align-items:flex-end;
+  margin-top:auto;
+  padding-right:0;
+}
+.ds-drawer__social-link{
+  display:block;
+  font-size:var(--size-meta);
+  font-weight:var(--weight-structural);
+  letter-spacing:var(--track-meta);
+  text-transform:uppercase;
+  color:var(--text-lo);
+  text-decoration:none;
+  border-bottom:0;
+  padding:var(--space-2) 0;
+  transition:color var(--dur-fast) var(--ease-out);
+}
+.ds-drawer__social-link:hover{color:var(--text-hi)}
+
 /* ---------- narrow ----------
    Must stay after the base rules above — same specificity, so cascade
    order is what makes these win. */
 
 @media(max-width:760px){
-  .ds-nav__inner{flex-wrap:wrap;row-gap:var(--space-2);padding-block:var(--space-3);gap:var(--space-3)}
-  .ds-nav__inner > nav{order:3;flex-basis:100%}
-  .ds-nav__links{gap:var(--space-4);justify-content:center}
-  .ds-toggle__btn{padding:5px 10px;font-size:0.5625rem}
+  .ds-nav{background:var(--surface)}
+  .ds-nav__inner{padding-block:var(--space-2)}
+  .ds-nav__inner > nav{display:none}
+  .ds-nav__inner > .ds-toggle--bar{display:none}
+  .ds-nav__burger{display:flex}
+  .ds-drawer{display:block}
 }

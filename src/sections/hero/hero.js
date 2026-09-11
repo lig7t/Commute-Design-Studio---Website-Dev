@@ -22,7 +22,9 @@ export function pickHeroFrames(works) {
   if (!works.length) return works;
   const byId = new Map(works.map((w) => [w.id, w]));
   const picked = HERO_REEL_IDS.map((id) => byId.get(id)).filter(Boolean);
-  return picked.length ? picked : works.slice(0, 10);
+  const frames = picked.length ? picked : works.slice(0, 10);
+  const mobile = window.matchMedia('(max-width: 760px)').matches;
+  return mobile ? frames.slice(0, 3) : frames;
 }
 
 /* Deterministic seeded PRNG (mulberry32). The interiors exit uses this so
@@ -147,10 +149,11 @@ export async function mountReel(works) {
   gsap.set(workEl, { xPercent: 100, opacity: 0 });
   workItems.forEach((el) => gsap.set(el, { opacity: 0, y: 24 }));
 
+  const mobile = window.matchMedia('(max-width: 760px)').matches;
   const stageST = ScrollTrigger.create({
     trigger: stage,
     start: 'top top',
-    end: PIN.end,
+    end: mobile ? '+=300%' : PIN.end,
     pin: true,
     pinSpacing: true,
     scrub: PIN.scrub,

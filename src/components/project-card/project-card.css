@@ -80,5 +80,7 @@
   .card__grid{position:static;overflow-y:visible;grid-template-columns:repeat(3,1fr)}
 }
 @media(max-width:760px){
-  .card__grid{grid-template-columns:repeat(2,1fr)}
+  .card__panel{padding-top:max(var(--space-9), env(safe-area-inset-top, 16px))}
+  .card__close{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+  .card__grid{grid-template-columns:repeat(2,1fr);gap:var(--space-4)}
 }
