@@ -14,6 +14,10 @@
 
 import { gsap, Flip, reduced } from '../../lib/motion.js';
 import { asset as resolve } from '../../lib/works.js';
+import {
+  lockScroll as lockPageScroll,
+  unlockScroll as unlockPageScroll,
+} from '../../lib/scroll-lock.js';
 
 // Reduced motion keeps the detail card but shortens the morph, per the spec's
 // "shorten/soften the Flip morph" — the transition still explains where the
@@ -45,6 +49,14 @@ export class Card {
     this.tl = null;
     this.state = 'closed'; // closed | opening | open | closing
 
+    /* Resolvers waiting for this card to finish closing. The mobile drawer
+       needs it: it hides itself while a card is up and brings itself back when
+       the card is gone, so it has to be able to ask "tell me when you are
+       done" without knowing anything about Flip timelines or which of the two
+       close paths ran. Flushed in reset(), which is the single point every
+       close path funnels through. */
+    this.closeWaiters = [];
+
     this.panel = this.root.querySelector('.card__panel');
 
     // Held, not re-queried: open() animates them, so they are a target list
@@ -64,6 +76,14 @@ export class Card {
 
   setSlides(slides) {
     this.slides = slides;
+  }
+
+  /** Resolves once the card is fully closed and reset. Resolves immediately if
+      it is already closed, so a caller can await it unconditionally without
+      first having to check state. */
+  onceClosed() {
+    if (this.state === 'closed') return Promise.resolve();
+    return new Promise((resolve) => this.closeWaiters.push(resolve));
   }
 
   /** Animate a slide's thumbnail into the full detail card. */
@@ -332,16 +352,26 @@ export class Card {
     this.slide = null;
     this.tl = null;
     this.state = 'closed';
+
+    // Taken and cleared before calling, so a waiter that re-opens the card
+    // synchronously cannot be resolved twice by this same flush.
+    const waiters = this.closeWaiters;
+    this.closeWaiters = [];
+    for (const resolve of waiters) resolve();
   }
 
   // Freeze the page (and the pinned gallery behind it) while the card is
   // open — same effect as the tutorial's slider.stop()/start(), reached
   // here by blocking scroll input rather than disabling an Observer.
+  /* Delegated to lib/scroll-lock.js. The card is no longer the only thing that
+     can be holding the page: a card opened from the mobile drawer's project
+     list is open WHILE the drawer is, and writing overflow directly here used
+     to release the drawer's lock on close. */
   lockScroll() {
-    document.documentElement.style.overflow = 'hidden';
+    lockPageScroll();
   }
   unlockScroll() {
-    document.documentElement.style.overflow = '';
+    unlockPageScroll();
   }
 }
 
