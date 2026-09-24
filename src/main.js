@@ -11,12 +11,12 @@
 
 import { ScrollTrigger, hasGsap, reduced } from './lib/motion.js';
 import { initTheme } from './lib/theme.js';
-import { mountMedia } from './lib/media.js';
+import { mountMedia, decodeAll } from './lib/media.js';
 import { loadWorks } from './lib/works.js';
 import { armChoreography, mountChoreography } from './lib/reveal.js';
 import { mountParallax } from './lib/parallax.js';
 
-import { mountLoader, dismissLoader } from './components/loader/loader.js';
+import { mountLoader, dismissLoader, setAssetProgress } from './components/loader/loader.js';
 import { mountThemeToggle } from './components/theme-toggle/theme-toggle.js';
 import {
   mountNavHeight,
@@ -76,6 +76,27 @@ loadWorks()
     // against a document that has not yet grown by the two pins' spacing.
     mountChoreography();
     if (hasGsap && !reduced) ScrollTrigger.refresh();
+
+    /* Hold the boot screen until the pictures are actually paintable.
+
+       This has to come AFTER initGallery(), because that is what creates the
+       gallery's <img> elements in the first place — they do not exist during
+       window 'load', which is exactly why the overlay used to lift onto a grid
+       of grey mattes.
+
+       Scoped to what the reader meets first rather than all 162 files: the
+       gallery slides, the interiors section, and any markup image already in
+       the page. The card's own images are excluded — it starts blank by
+       design and fills on open, so waiting on them would hold the screen for
+       pictures nobody has asked to see yet.
+
+       Awaited inside the chain so .finally below still runs on every path,
+       and so a rejection here cannot skip the dismissal. */
+    const above = [...document.querySelectorAll('.gallery__slide img, .work img, .ds-media img')];
+    await decodeAll(
+      above.filter((img) => !img.closest('[data-card]')),
+      setAssetProgress,
+    );
   })
   // loadWorks() resolves to [] rather than rejecting, so only the mount chain
   // above can land here — a WebGL context that failed, say. The page is

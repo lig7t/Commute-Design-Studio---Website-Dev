@@ -8,16 +8,30 @@
 
    ---- The two clocks ----
 
-   The number is driven by TIME. It is not a progress bar and must never
-   pretend to be one: there is no honest single percentage to report across
-   a fetch, a WebGL context, two pins and a ScrollTrigger.refresh().
+   The number is the SMALLER of two progressions: time, and how much of the
+   image set has actually arrived. Time sets the floor of the pacing, assets
+   set the ceiling, and the reader sees whichever is further behind.
 
-   Dismissal is gated on REAL READINESS. The counter may reach 99 whenever
-   its own clock says so, but it may only reach 100 and leave once all of:
+   This file used to insist the number was time-only, on the reasoning that no
+   honest single percentage exists across a fetch, a WebGL context, two pins
+   and a refresh. That was right at the time and is recorded here because the
+   reversal needs a reason: images became something the loader genuinely waits
+   for, N-of-M is an honest fraction, and the alternative was worse — the
+   counter hit 100, the overlay left, and the page underneath was a grid of
+   grey placeholders filling in one by one. That is the same dishonesty the
+   original rule was written to prevent, just arriving from the other side.
+
+   Dismissal is gated on REAL READINESS. The counter may reach 99 whenever its
+   own clock and the image set agree, but it may only reach 100 and leave once
+   all of:
 
      minElapsed   the minimum duration has run (the counter has finished)
-     loadReady    window 'load' has fired, so images are decoded and in
+     loadReady    window 'load' has fired
      mountReady   main.js's loadWorks() chain has finished, refresh included
+     assetsReady  every tracked image has decoded (or SAFETY_MS gave up)
+
+   loadReady is kept even though assetsReady largely supersedes it: it still
+   covers the markup's own images, the ones that exist before any JS runs.
 
    Each is a one-way latch, and every setter funnels through finish(), so
    the order they arrive in does not matter.
@@ -105,6 +119,20 @@ let minElapsed = false;
 let loadReady = false;
 let mountReady = false;
 let finished = false;
+
+/* The fourth gate, and the reason it exists: window 'load' fires before the
+   gallery's images are in the DOM at all. buildSlides() creates them inside
+   initGallery(), which runs at the end of an async chain — long after 'load'
+   has come and gone — so loadReady was, for the images the reader actually
+   looks at first, meaningless. The overlay left, and the page underneath was
+   a grid of grey .ds-media boxes filling in one by one.
+
+   assetsTracked distinguishes "no images to wait for" from "none loaded yet".
+   Without it, a page that never reports progress would be held until
+   SAFETY_MS every single time. */
+let assetProgress = 0;
+let assetsTracked = false;
+let assetsReady = false;
 
 /* power3.in, written out rather than imported: the counter must still run
    if GSAP failed to load, since the overlay it drives is what is covering
@@ -208,8 +236,17 @@ function releaseInteraction() {
 /* ---------- the counter ---------- */
 
 function paint(n) {
-  // Write-cache, not state: `n` is derived from the clock every frame, so
-  // this only suppresses redundant DOM writes between digit changes.
+  /* MONOTONIC FLOOR. The count is now the lesser of two progressions (see
+     tick), and the asset one can legitimately drop the moment tracking begins
+     — it starts at "untracked, so no cap" and becomes a real 0-of-N fraction
+     once main.js knows how many images there are. Without this clamp that
+     hand-off could walk the number backwards, which is the one thing a
+     countdown must never do. Math.max, not a guard, so the floor holds for
+     every caller including the final paint(100). */
+  if (n < countShown) n = countShown;
+
+  // Write-cache, not state: `n` is derived from state every frame, so this
+  // only suppresses redundant DOM writes between digit changes.
   if (n === countShown) return;
   countShown = n;
 
@@ -222,16 +259,31 @@ function paint(n) {
 }
 
 /* One frame: READ the clock, CALCULATE, WRITE. Nothing is measured off the
-   DOM and nothing accumulates — countShown is recomputed from elapsedMs
-   every tick, so a dropped frame or a backgrounded tab cannot drift it, and
-   monotonic time through a monotonic ease is what guarantees the number can
-   never go backwards. */
+   DOM and nothing accumulates — the count is recomputed from state every
+   tick, so a dropped frame or a backgrounded tab cannot drift it.
+
+   THE NUMBER IS NOW CAPPED BY REAL PROGRESS, and that is a deliberate reversal
+   of what this file used to say. It was time-only, on the reasoning that there
+   is no honest single percentage across a fetch, a WebGL context and two pins.
+   That was true then. It stopped being true once the gallery's images became
+   something we actually wait for: images are countable, N-of-M is an honest
+   fraction, and the reader was watching a counter hit 100 and then still
+   seeing grey placeholders — which is the exact dishonesty the old comment was
+   trying to avoid, arriving from the other direction.
+
+   So: time still sets the FLOOR of the pacing (the count cannot outrun
+   MIN_DURATION_MS), and assets set the CEILING (it cannot outrun what has
+   actually loaded). The reader sees the smaller of the two. */
 function tick(now) {
   const elapsedMs = now - startMs;
   const countProgress = Math.min(elapsedMs / MIN_DURATION_MS, 1);
   const countEased = easeIn(countProgress);
 
-  paint(Math.floor(countEased * HOLD_AT));
+  // Untracked means "no opinion", not "nothing loaded" — main.js only starts
+  // reporting once it knows the image set, and until then time alone drives.
+  const cap = assetsTracked ? assetProgress : 1;
+
+  paint(Math.floor(Math.min(countEased, cap) * HOLD_AT));
 
   if (countProgress < 1) {
     rafId = requestAnimationFrame(tick);
@@ -243,11 +295,34 @@ function tick(now) {
   finish();
 }
 
+/* Called while the counter is still running, so the number tracks the images.
+   Also latches the gate: the overlay may not leave until this reaches 1.
+
+   Kept as a number the caller pushes in, rather than the loader going looking
+   for images itself: which images matter is a question about the page, and
+   main.js is where the page's shape is known. This module stays the thing that
+   owns the overlay and nothing else. */
+export function setAssetProgress(fraction) {
+  assetsTracked = true;
+  // Clamped and monotonic for the same reason paint() is: a late-arriving
+  // report must never walk the number back.
+  const next = Math.min(Math.max(fraction, 0), 1);
+  if (next > assetProgress) assetProgress = next;
+
+  if (assetProgress >= 1) {
+    assetsReady = true;
+    // The counter may already have stopped (time ran out first) and be sitting
+    // at its cap waiting for exactly this.
+    if (!rafId && minElapsed) paint(HOLD_AT);
+    finish();
+  }
+}
+
 /* ---------- exit ---------- */
 
 function finish() {
   if (finished) return;
-  if (!(minElapsed && loadReady && mountReady)) return;
+  if (!(minElapsed && loadReady && mountReady && (assetsReady || !assetsTracked))) return;
   finished = true;
 
   if (rafId) cancelAnimationFrame(rafId);
@@ -354,7 +429,7 @@ export function mountLoader() {
   else window.addEventListener('load', () => ((loadReady = true), finish()), { once: true });
 
   safetyId = setTimeout(() => {
-    minElapsed = loadReady = mountReady = true;
+    minElapsed = loadReady = mountReady = assetsReady = true;
     finish();
     // finish() is latched. If it had already run and the exit was still in
     // flight, the line above is a no-op and this is the last thing that can
