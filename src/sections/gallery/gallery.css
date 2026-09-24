@@ -95,7 +95,11 @@
 .gallery__hint{
   position:absolute;
   right:var(--space-3);
-  bottom:var(--space-3);
+  /* Top, not bottom: the pill pops out of the picture's top-right corner.
+     Inset rather than straddling the edge because .gallery__img-wrapper clips
+     — see the note in ClickHint for why moving it out to the slide to
+     overhang would put it off the photograph on a long project title. */
+  top:var(--space-3);
   z-index:1; /* above the absolutely-positioned, scaled <img> beneath it */
   padding:var(--space-2) var(--space-3);
   border-radius:var(--radius-pill);

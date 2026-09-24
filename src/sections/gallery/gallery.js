@@ -199,32 +199,47 @@ class Reveal {
   }
 }
 
-/* ---------- ClickHint (the "click me" bubble on the first slide) ----------
+/* ---------- ClickHint (the "click me" pill, one per picture) ----------
 
-   A single decorative pill parked in the first picture's bottom-right corner,
-   there to say the slides open a detail card. Two beats: the pill pops, then a
-   beat later the words inside it pop.
+   A decorative pill that pops out of each picture's TOP-right corner, there to
+   say the slides open a detail card. Two beats: the pill pops, then a beat
+   later the words inside it pop.
 
-   WHERE IT LIVES, and why. It is appended INSIDE the first slide's
+   ONE PER SLIDE, NOT ONE TOTAL. Every slide owns its own instance, so the cue
+   is wherever the reader is actually looking rather than only on the first
+   picture. They share nothing — each is driven purely by its own slide's
+   state, which is what keeps the loop's wrap-around from needing to hand a
+   single pill between slides.
+
+   WHY IT IS NOT DISMISSED ON FIRST OPEN. It used to retire itself the first
+   time a card opened, on the reasoning that the reader had learned the lesson.
+   That is incompatible with the hover cue below: a pill that is also an
+   on-demand answer to "is this thing clickable" has to still be there the
+   tenth time you point at a picture. It is now a persistent affordance, not a
+   one-time teach, so there is no dismissed state at all.
+
+   WHERE IT LIVES, and why. It is appended INSIDE the slide's
    .gallery__img-wrapper, not the .gallery__slide:
 
-     - The wrapper is the picture, and the picture's right corner is the corner
-       the reader sees. The slide box is a shrink-to-fit flex item that also
+     - The wrapper is the picture, and the picture's corner is the corner the
+       reader sees. The slide box is a shrink-to-fit flex item that also
        contains the figcaption, so a long project title makes the slide wider
        than the image and a "right corner" anchored to the slide would float
        off the photograph.
      - The wrapper is already position:relative and already clips
        (overflow:hidden), so the pill needs no new containing block and can
        never spill over a neighbouring slide. It is inset from both edges, so
-       the clip never bites.
+       the clip never bites. That clip is also why the pill sits just inside
+       the top-right corner rather than straddling it: anything hanging past
+       the wrapper's edge would be cut off, and lifting the pill out to the
+       slide to avoid that would reintroduce the width problem above.
      - Being absolutely positioned, it contributes nothing to layout — which
        matters, because Gallery.measure() takes the slide's rect height and the
        loop multiplies it by yPercents reaching ±1600%.
      - Flip: the card-open morph's Flip.from() targets Card's .ds-media, never
        this wrapper (the wrapper is only the recorded FROM state), so the pill
        is never adopted into the card. It does ride the wrapper's autoAlpha and
-       reveal y — that is intended, it should travel with the picture — and by
-       the time a card opens the hint has already been dismiss()ed anyway.
+       reveal y — that is intended, it should travel with the picture.
 
    TRANSFORMS. The pill and its label are new elements with their own transform
    space: this class is the only writer of scale/alpha on either, and nothing
@@ -234,10 +249,7 @@ class Reveal {
 
    LIFECYCLE. `shown` is per entry — hide() re-arms it so a slide cycling back
    around the loop (or a reader scrolling back up out of the pin, see
-   Gallery.reset) can legitimately replay the pop. `dismissed` is permanent and
-   outranks both: the first time a reader actually opens a card the hint has
-   done its job, and it is removed outright rather than left hidden, so there is
-   no state left that could bring it back. */
+   Gallery.reset) can legitimately replay the pop. */
 
 const HINT_TEXT = 'click me';
 const HINT_BEAT = 0.35; // s between the pill landing and the words arriving
@@ -260,24 +272,64 @@ class ClickHint {
 
     this.tl = null;
     this.shown = false;
-    this.dismissed = false;
+
+    /* TWO INDEPENDENT CUES, ONE RENDERED STATE. inView is edge-driven by the
+       loop; hovered is edge-driven by the pointer. They are stored separately
+       and OR'd in sync() rather than collapsed into one boolean, because both
+       can be true at once and whichever ends first must not hide a pill the
+       other still wants shown — a single flag would let a pointer leaving
+       retract a hint the slide's own visibility is still asserting. */
+    this.inView = false;
+    this.hovered = false;
 
     // transformOrigin is set here rather than in CSS so that one writer owns
-    // the whole transform: the pill grows out of the corner it is pinned to.
-    gsap.set(this.el, { autoAlpha: 0, scale: 0.4, transformOrigin: '100% 100%' });
+    // the whole transform: the pill grows out of the corner it is pinned to,
+    // which is now the TOP right — see the inset in gallery.css.
+    gsap.set(this.el, { autoAlpha: 0, scale: 0.4, transformOrigin: '100% 0%' });
     gsap.set(this.label, { autoAlpha: 0, scale: 0.6, transformOrigin: '50% 50%' });
+
+    /* Hover is bound on the SLIDE, not on this pill: the pill is
+       pointer-events:none (it must never eat the click it advertises), so it
+       cannot receive pointer events at all, and the slide is the thing the
+       reader is actually pointing at.
+
+       Gated on a real hover-capable pointer. On touch, `pointerenter` fires on
+       tap and would leave a pill stuck on the last-tapped slide with no
+       corresponding leave — the viewport cue already covers touch. */
+    if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      slide.addEventListener('pointerenter', () => this.setHovered(true));
+      slide.addEventListener('pointerleave', () => this.setHovered(false));
+      // A card opening steals the pointer without a leave ever firing.
+      slide.addEventListener('pointercancel', () => this.setHovered(false));
+    }
   }
 
-  // Edge-driven by the callers (see Gallery.renderSlides and
-  // initMobileGallery) — never called on a per-tick state, or the pop would
-  // restart every frame the first slide spent on screen.
-  toggle(fullyVisible) {
-    if (fullyVisible) this.show();
+  /* Edge-driven by the callers (see Gallery.renderSlides and
+     initMobileGallery) — never called on a per-tick state, or the pop would
+     restart on every frame the slide spent on screen. Both setters guard on
+     the value actually changing, so a caller that is not edge-perfect still
+     cannot retrigger the animation. */
+  setInView(v) {
+    if (v === this.inView) return;
+    this.inView = v;
+    this.sync();
+  }
+
+  setHovered(v) {
+    if (v === this.hovered) return;
+    this.hovered = v;
+    this.sync();
+  }
+
+  // STATE -> CALCULATE -> RENDER. sync() is the only caller of show()/hide(),
+  // so the rendered pill is always a pure function of the two cues above.
+  sync() {
+    if (this.inView || this.hovered) this.show();
     else this.hide();
   }
 
   show() {
-    if (this.dismissed || this.shown) return;
+    if (this.shown) return;
     this.shown = true;
 
     // Additive: with reduced motion the hint still has to be readable, so it
@@ -307,20 +359,12 @@ class ClickHint {
   }
 
   hide() {
-    if (this.dismissed) return;
+    if (!this.shown) return;
     this.shown = false;
     this.tl?.kill();
     this.tl = null;
     gsap.set(this.el, { autoAlpha: 0, scale: 0.4 });
     gsap.set(this.label, { autoAlpha: 0, scale: 0.6 });
-  }
-
-  dismiss() {
-    if (this.dismissed) return;
-    this.dismissed = true;
-    this.tl?.kill();
-    this.tl = null;
-    this.el.remove();
   }
 }
 
@@ -397,13 +441,13 @@ function driftCeiling(img) {
      .gallery__hint           scale, alpha -> the click hint (ClickHint)
      .gallery__hint-label     scale, alpha -> the click hint's second beat
 
-   The last two are the hint bubble on the first slide — a NEW element inside
-   that slide's wrapper, with its own transform space. Nothing above writes to
-   it and it writes to nothing above; it is positioned by CSS inset rather than
-   a transform so ClickHint's scale is the only transform on it, and it rides
-   the wrapper's y/alpha as a child, which is how it travels with the picture.
+   The last two are the hint pill, one per slide — a NEW element inside each
+   slide's wrapper, with its own transform space. Nothing above writes to it
+   and it writes to nothing above; it is positioned by CSS inset rather than a
+   transform so ClickHint's scale is the only transform on it, and it rides the
+   wrapper's y/alpha as a child, which is how it travels with the picture.
 
-   One more derived reading, and it is the hint's entire cue:
+   One more derived reading, and it is HALF of the hint's cue:
 
      fullyVisible    screenTop >= 0 && screenTop + height <= vh. Pure state,
                      read off the same frame's screenTop — no second rect, no
@@ -412,22 +456,25 @@ function driftCeiling(img) {
                      the whole pinned range anyway. Committed like `visible`
                      is, so ClickHint only ever hears about EDGES.
 
+   The other half is hover, which ClickHint binds on the slide itself and which
+   this pass never sees. The two are OR'd inside ClickHint rather than here:
+   pointer state is not scroll state, it does not belong in the per-frame loop,
+   and keeping it out means this pass stays a pure function of scroll.
+
    STATE IS THE SOURCE OF TRUTH. The render pass reads the DOM for exactly two
    things it does not own — where ScrollTrigger has put the pinned stage, and
    how big the viewport is — and takes them once per frame, before any write.
    It never measures a slide to recover a position it applied itself. */
 
 class Gallery {
-  constructor(section, slides, reveal, hint = null) {
+  constructor(section, slides, reveal, hints = []) {
     this.section = section;
     this.slides = slides;
     this.reveal = reveal;
-    this.hint = hint;
-    // Held as the ELEMENT, not an index into slideState, because
-    // createSlideState() renders once before it returns — keying off the
-    // element makes the hint's cue independent of constructor ordering rather
-    // than quietly inert on that first pass.
-    this.hintSlide = hint ? slides[0] : null;
+    // Parallel to `slides` by index, so each item's own hint is reachable from
+    // its own state in renderSlides without a lookup. Empty when the card
+    // cannot open at all (see initGallery) — every use is optional-chained.
+    this.hints = hints;
     this.LAPS = 1; // one full loop across the pinned distance
     this.INERTIA_TAU = 0.35; // weight of the coast — bigger = heavier/slower to catch up
     this.ENTER = 0.12; // share of the pinned distance spent arriving from below the fold
@@ -473,6 +520,9 @@ class Gallery {
         el,
         img: el.querySelector('.gallery__img-wrapper img'),
         factor: speeds[i % speeds.length] - 1,
+        // Bound here rather than looked up per tick, and held on the item so
+        // renderSlides' for-of needs no index. null when the card cannot open.
+        hint: this.hints[i] ?? null,
 
         // Measured geometry, refreshed by measure().
         layoutTop: 0, // static offset within the track, before any transform
@@ -489,8 +539,7 @@ class Gallery {
 
         // Per-frame scratch: CALCULATE writes them, WRITE commits them into
         // `visible` / `fullyVisible`. Held on the item so the hot loop
-        // allocates nothing. Computed for every slide, not just the hinted
-        // one, so the pass keeps its "no special case" shape.
+        // allocates nothing.
         nextVisible: false,
         nextFullyVisible: false,
 
@@ -632,11 +681,11 @@ class Gallery {
       }
 
       // Same edge-not-state discipline as the reveal above, for the same
-      // reason: fire on the state and the pop restarts every tick the first
-      // slide spends fully on screen.
+      // reason: fire on the state and the pop restarts every tick the slide
+      // spends fully on screen. Each slide drives its own hint by index.
       if (item.nextFullyVisible !== item.fullyVisible) {
         item.fullyVisible = item.nextFullyVisible;
-        if (item.el === this.hintSlide) this.hint.toggle(item.fullyVisible);
+        item.hint?.setInView(item.fullyVisible);
       }
     }
 
@@ -718,9 +767,11 @@ class Gallery {
       item.fullyVisible = false;
     }
     this.slides.forEach((slide) => this.reveal.hide(slide));
-    // Re-arms `shown` unless the reader has already opened a card, in which
-    // case dismiss() outranks this and the hint stays gone for good.
-    this.hint?.hide();
+    // Clear the loop's cue on every hint and re-arm `shown`, so re-entering
+    // the pin replays the pop. setInView(false) rather than hide() directly:
+    // a pointer still resting on a slide keeps its own cue, and going through
+    // the setter is what lets sync() honour that instead of stomping it.
+    for (const hint of this.hints) hint.setInView(false);
     this.arrivalRemaining = 1;
     this.arrivalY = window.innerHeight;
     this.setArrivalY(this.arrivalY);
@@ -773,7 +824,7 @@ class Gallery {
    and the pinned scrub are dropped, so the gallery lives in normal document
    flow. */
 
-function initMobileGallery(section, slides, hint = null) {
+function initMobileGallery(section, slides, hints = []) {
   const firstImg = slides[0]?.querySelector('.gallery__img-wrapper img');
   const ceiling = driftCeiling(firstImg);
   const clamp = gsap.utils.clamp(-ceiling, ceiling);
@@ -800,7 +851,7 @@ function initMobileGallery(section, slides, hint = null) {
        on every resize, so this is exact there and costs no read in onUpdate,
        which is pure write. A slide taller than the viewport gives enter > exit
        and the window is simply never entered. */
-    const isHintSlide = Boolean(hint) && i === 0;
+    const hint = hints[i] ?? null;
     let hintEnter = 0;
     let hintExit = 0;
     let hintFullyVisible = false;
@@ -810,7 +861,7 @@ function initMobileGallery(section, slides, hint = null) {
       start: 'top bottom',
       end: 'bottom top',
       onRefresh: (self) => {
-        if (!isHintSlide) return;
+        if (!hint) return;
         const visibleShare = window.innerHeight / (self.end - self.start);
         hintEnter = 1 - visibleShare;
         hintExit = visibleShare;
@@ -829,11 +880,11 @@ function initMobileGallery(section, slides, hint = null) {
         // Edge, never state — identical contract to the desktop path, and it
         // has to sit above the `!img` bail below or a slide with no image
         // would silently skip it.
-        if (isHintSlide) {
+        if (hint) {
           const next = p >= hintEnter && p <= hintExit;
           if (next !== hintFullyVisible) {
             hintFullyVisible = next;
-            hint.toggle(next);
+            hint.setInView(next);
           }
         }
 
@@ -853,17 +904,13 @@ function initMobileGallery(section, slides, hint = null) {
     tabindex and an aria-label, so the affordance has to lead somewhere in
     both. Reduced motion softens the morph (see components/project-card) rather than
     removing the detail view. */
-function wireCard(slides, onActivate = null) {
+function wireCard(slides) {
   const card = new Card();
   card.setSlides(slides);
 
   slides.forEach((slide, index) => {
     const activate = () => {
       if (card.state !== 'closed') return; // guards double-clicks / rapid-fire
-      // After the guard, so only a card that actually opens retires the hint.
-      // The hint's whole claim is "these open" — once the reader has proved
-      // they know, it is noise.
-      onActivate?.();
       card.open(slide, index, projects[index]);
     };
     slide.addEventListener('click', activate);
@@ -898,43 +945,64 @@ export function initGallery() {
   const slides = buildSlides(track);
   const canCard = Boolean(gsap && Flip);
 
-  /* The hint exists only where it tells the truth. Without Flip the slides are
-     not controls at all — stripSlideAffordances() takes role/tabindex back off
-     them — so a bubble reading "click me" would be advertising something that
-     does not happen. Built once here, where canCard is known, and handed down
-     to whichever path renders the gallery; every path shares one instance, so
-     "dismissed" means dismissed. */
-  const hint = canCard && slides[0] ? new ClickHint(slides[0]) : null;
-  const wire = () =>
-    canCard ? wireCard(slides, () => hint?.dismiss()) : stripSlideAffordances(slides);
+  /* One hint per slide, and only where they tell the truth. Without Flip the
+     slides are not controls at all — stripSlideAffordances() takes role and
+     tabindex back off them — so a pill reading "click me" would be advertising
+     something that does not happen. Built here, where canCard is known, and
+     handed down to whichever path renders the gallery. */
+  const hints = canCard ? slides.map((slide) => new ClickHint(slide)) : [];
+
+  // Captured so the API below can reach it. wire() runs before every return
+  // path, so `card` is always assigned by the time a caller can use the API.
+  let card = null;
+  const wire = () => {
+    if (canCard) card = wireCard(slides);
+    else stripSlideAffordances(slides);
+  };
+
+  /* What this section offers the rest of the page. Returned from every path so
+     a caller never has to know which one ran, and deliberately data-plus-verb
+     rather than the Gallery instance: the navigation needs a list of projects
+     and a way to open one, not a scroll-driven loop it has no business
+     touching. Keeping it this shape is what lets navigation.js stay a generic
+     component that knows nothing about galleries — see the dependency rule in
+     CLAUDE.md, components must not import sections. */
+  const api = {
+    projects: projects.map((project, index) => ({ index, title: project.title })),
+    // Detached on purpose — see Card.openDetached for why a nav-driven open
+    // must not morph from, or write to, a slide.
+    openProject: (index) => card?.openDetached(index, projects[index]),
+    canOpen: () => canCard,
+  };
 
   // Reduced motion / no GSAP: show a plain static column, no loop. The card
   // still opens on demand.
   if (reduced || !gsap || !ScrollTrigger) {
     if (gsap) gsap.set(section.querySelectorAll('.gallery__img-wrapper'), { autoAlpha: 1 });
     // No scroll cue exists on this path — nothing is animated into view, so
-    // there is no "fully visible" edge to wait for. Additive: the hint still
-    // appears, it just appears at rest (ClickHint.show() branches on reduced).
-    hint?.show();
+    // there is no "fully visible" edge to wait for. Additive: the hints still
+    // appear, they just appear at rest (ClickHint.show() branches on reduced).
+    // Through setInView, not show(), so hover still composes with them.
+    for (const hint of hints) hint.setInView(true);
     wire();
-    return null;
+    return api;
   }
 
   const isMobile = window.matchMedia('(max-width: 760px)').matches;
   if (isMobile) {
-    initMobileGallery(section, slides, hint);
+    initMobileGallery(section, slides, hints);
     wire();
-    return null;
+    return api;
   }
 
   const reveal = new Reveal(slides);
-  const gallery = new Gallery(section, slides, reveal, hint);
+  new Gallery(section, slides, reveal, hints);
 
   // Click/tap/Enter/Space opens the Flip detail card. No slide
   // opens itself; every card view is a deliberate action.
   wire();
 
-  return gallery;
+  return api;
 }
 
 export default initGallery;
