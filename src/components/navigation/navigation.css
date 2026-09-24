@@ -166,3 +166,113 @@
   .ds-nav__burger{display:flex}
   .ds-drawer{display:block}
 }
+
+/* ===== Project sub-list (navigation.js / mountNavProjects) =================
+
+   The projects under "Interiors", on both nav surfaces. Populated at runtime
+   from section data — the markup for these does not exist in index.html.
+   ========================================================================= */
+
+/* The <li> is the containing block for the desktop panel. position:relative
+   here rather than on .ds-navlink because the panel must hang off the whole
+   list item, and the link itself already uses position:relative for its own
+   underline. */
+.ds-nav__links > li{position:relative}
+
+/* Hidden by default and revealed by either cue — the scroll-driven class that
+   navigation.js toggles, OR pointer/keyboard attention. Both are in one
+   selector list so the JS never has to know about hover, and hover costs no
+   script at all.
+
+   visibility (not display) so the panel can transition, and so its buttons
+   are properly removed from the tab order while closed — display:none would
+   also work for focus but cannot animate. */
+.ds-nav__projects{
+  position:absolute;
+  top:calc(100% + var(--space-3));
+  right:0;
+  z-index:21; /* above .ds-nav's own 20, or the bar clips its own menu */
+  min-width:15rem;
+  list-style:none;
+  margin:0;
+  padding:var(--space-3) 0;
+  background:var(--surface);
+  border:var(--hairline) solid var(--rule);
+  /* --radius is 0 in this system and that is deliberate: the pill radius is
+     reserved for the small floating controls (the hint, the card's close).
+     A panel is structure, and structure here has square corners. */
+  border-radius:var(--radius);
+  opacity:0;
+  visibility:hidden;
+  transform:translateY(-6px);
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    visibility var(--dur-fast) var(--ease-out);
+}
+.ds-nav__links > li.is-current-section .ds-nav__projects,
+.ds-nav__links > li:hover .ds-nav__projects,
+.ds-nav__links > li:focus-within .ds-nav__projects{
+  opacity:1;
+  visibility:visible;
+  transform:translateY(0);
+}
+
+.ds-nav__project{
+  display:block;
+  width:100%;
+  text-align:left;
+  padding:var(--space-2) var(--space-5);
+  background:none;
+  border:0;
+  cursor:pointer;
+  font-family:var(--font-meta);
+  font-size:var(--size-meta);
+  font-weight:var(--weight-structural);
+  letter-spacing:var(--track-meta);
+  text-transform:uppercase;
+  color:var(--text-lo);
+  transition:color var(--dur-fast) var(--ease-out);
+}
+.ds-nav__project:hover,
+.ds-nav__project:focus-visible{color:var(--accent)}
+
+/* Drawer: a nested list, always present. Indented and stepped down in size so
+   it reads as subordinate to the "Interiors" link above it rather than as a
+   fourth peer of Interiors / About / Contact. */
+.ds-drawer__projects{
+  list-style:none;
+  margin:0 0 var(--space-4);
+  padding:0 0 0 var(--space-4);
+  display:flex;
+  flex-direction:column;
+  border-left:var(--hairline) solid var(--rule);
+}
+.ds-drawer__project{
+  display:block;
+  width:100%;
+  text-align:left;
+  padding:var(--space-2) 0;
+  background:none;
+  border:0;
+  cursor:pointer;
+  font-family:var(--font-meta);
+  font-size:var(--size-meta);
+  font-weight:var(--weight-structural);
+  letter-spacing:var(--track-meta);
+  text-transform:uppercase;
+  color:var(--text-lo);
+  transition:color var(--dur-fast) var(--ease-out);
+}
+.ds-drawer__project:hover,
+.ds-drawer__project:focus-visible{color:var(--accent)}
+
+@media(min-width:761px){
+  /* The drawer never opens above this width, but its list is in the DOM. */
+  .ds-drawer__projects{display:none}
+}
+@media(max-width:760px){
+  /* No hover panel on touch — the drawer's nested list is the mobile answer. */
+  .ds-nav__projects{display:none}
+  .ds-drawer__project{min-height:44px}
+}

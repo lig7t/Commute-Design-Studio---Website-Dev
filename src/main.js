@@ -21,6 +21,7 @@ import { mountThemeToggle } from './components/theme-toggle/theme-toggle.js';
 import {
   mountNavHeight,
   mountNav,
+  mountNavProjects,
   mountAnchors,
   mountDrawer,
 } from './components/navigation/navigation.js';
@@ -51,7 +52,24 @@ loadWorks()
     closeSeam(stageST);
     // Create the gallery pin AFTER the stage pin so it inherits the stage's
     // pin-spacing when computing its own start (pins must init in DOM order).
-    initGallery();
+    const gallery = initGallery();
+    // The nav's project list under "Interiors". This coupling lives HERE and
+    // nowhere else: navigation.js is a component and gallery.js is a section,
+    // and components must not import sections (CLAUDE.md, dependencies point
+    // downward only). main.js already imports both, so it is the one place
+    // allowed to introduce them — the nav receives plain data and a callback
+    // and stays ignorant of what a project is.
+    //
+    // Safe to run before the reveal pass below: it only appends to the nav,
+    // which is inside REVEAL_SKIP_CONTAINER and sits outside both pins, so it
+    // adds no document height for a later trigger to have mismeasured.
+    if (gallery?.canOpen()) {
+      mountNavProjects({
+        sectionId: 'work',
+        items: gallery.projects,
+        onSelect: gallery.openProject,
+      });
+    }
     // mountParallax() also needs both pins already in the DOM — same reason.
     mountParallax();
     // Reveal triggers last, for that same reason: built any earlier they measure

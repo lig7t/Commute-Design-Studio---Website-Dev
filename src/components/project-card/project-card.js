@@ -47,7 +47,11 @@ export class Card {
 
     this.panel = this.root.querySelector('.card__panel');
 
-    this.root.querySelectorAll('[data-card-close]').forEach((btn) => {
+    // Held, not re-queried: open() animates them, so they are a target list
+    // rather than just a click surface. This class is the only writer of
+    // scale/alpha on them — same one-writer rule the gallery's hint follows.
+    this.closeBtns = [...this.root.querySelectorAll('[data-card-close]')];
+    this.closeBtns.forEach((btn) => {
       btn.addEventListener('click', () => this.close());
     });
     this.root.addEventListener('click', (e) => {
@@ -100,6 +104,11 @@ export class Card {
 
     gsap.set(this.image, { scale: 1.2 });
     gsap.set([...metaEls, ...gridItems], { autoAlpha: 0, y: 12 });
+    // Parked for the same pop the gallery's hint pill uses. transformOrigin is
+    // the left edge, because that is the edge the sticky button is anchored to
+    // — the pill grows out of the corner it is pinned to, and this is the same
+    // idea applied to a left-aligned control.
+    gsap.set(this.closeBtns, { autoAlpha: 0, scale: 0.4, transformOrigin: '0% 50%' });
 
     this.tl = gsap
       .timeline({
@@ -120,6 +129,11 @@ export class Card {
         0,
       )
       .to(this.image, { scale: 1, duration: OPEN_DURATION, ease: 'power4.inOut' }, 0)
+      // The close pill pops in, borrowing the gallery hint's ease and scale
+      // exactly (back.out(2) from 0.4) so the two read as the same object.
+      // Just ahead of the title, so the way out is offered before the content
+      // finishes arriving rather than after it.
+      .to(this.closeBtns, { autoAlpha: 1, scale: 1, duration: 0.5, ease: 'back.out(2)' }, 0.45)
       // fade-in: the title, then every image in the grid, staggered
       .to(metaEls, { autoAlpha: 1, y: 0, duration: 0.6, ease: 'power3.out', stagger: 0.06 }, 0.55)
       .to(
@@ -131,7 +145,79 @@ export class Card {
     return this.tl;
   }
 
-  /** Morph the card back into its slide. */
+  /** Open the card with no slide to morph from — the path the navigation's
+      project list uses.
+
+      WHY NOT JUST REUSE open(). Two reasons, and the second is the dangerous
+      one:
+
+      1. Flip.from() needs the slide's wrapper as a live FROM state. The desktop
+         gallery is a pinned loop whose slides sit at yPercents reaching ±1600%,
+         so the project the reader named from the nav is usually nowhere near
+         the viewport, and morphing from there would fly the image in from off
+         screen for no reason.
+
+      2. open() writes autoAlpha 0 to the slide's wrapper, and reset() restores
+         it to 1 unconditionally. That is only safe because a click PROVES the
+         slide was visible — reset()'s own comment says so. Opening from the nav
+         destroys that proof: the slide may be one the loop currently has
+         hidden, and restoring it to 1 on close would strand it visible inside a
+         loop whose state says it is not.
+
+      So this path never touches a slide. `this.slide` stays null, which
+      reset()'s `if (this.slide)` guard and close()'s branch below both already
+      read as "there is nothing to morph back into". */
+  async openDetached(index, project) {
+    if (!this.root || this.state !== 'closed') return;
+    if (!project) return;
+    this.state = 'opening';
+
+    // Same ordering rule as open(): decode before locking scroll, so a stalled
+    // decode cannot strand the page with overflow:hidden and no card.
+    await this.fill(project);
+    if (this.state !== 'opening') return;
+
+    this.lockScroll();
+
+    gsap.set(this.root, { display: 'block' });
+    this.root.setAttribute('aria-hidden', 'false');
+
+    const metaEls = Object.values(this.fields).filter(Boolean);
+    const gridItems = [...this.gridEl.children];
+
+    gsap.set(this.mediaBox, { autoAlpha: 0, scale: 0.94, transformOrigin: '50% 50%' });
+    gsap.set(this.image, { scale: 1.12 });
+    gsap.set([...metaEls, ...gridItems], { autoAlpha: 0, y: 12 });
+    gsap.set(this.closeBtns, { autoAlpha: 0, scale: 0.4, transformOrigin: '0% 50%' });
+
+    // Beats deliberately identical to open()'s (0.45 / 0.55 / 0.75) so arriving
+    // from the nav and arriving from a picture feel like the same card.
+    this.tl = gsap
+      .timeline({
+        onComplete: () => {
+          this.state = 'open';
+        },
+        onReverseComplete: () => this.reset(),
+      })
+      .to(
+        this.mediaBox,
+        { autoAlpha: 1, scale: 1, duration: OPEN_DURATION, ease: 'power4.inOut' },
+        0,
+      )
+      .to(this.image, { scale: 1, duration: OPEN_DURATION, ease: 'power4.inOut' }, 0)
+      .to(this.closeBtns, { autoAlpha: 1, scale: 1, duration: 0.5, ease: 'back.out(2)' }, 0.45)
+      .to(metaEls, { autoAlpha: 1, y: 0, duration: 0.6, ease: 'power3.out', stagger: 0.06 }, 0.55)
+      .to(
+        gridItems,
+        { autoAlpha: 1, y: 0, duration: 0.5, ease: 'power3.out', stagger: 0.04 },
+        0.75,
+      );
+
+    return this.tl;
+  }
+
+  /** Morph the card back into its slide, or simply fade it out when it was
+      opened detached and has no slide to return to. */
   close() {
     if (this.state === 'opening') {
       this.state = 'closing';
@@ -145,11 +231,33 @@ export class Card {
     if (this.state !== 'open') return;
     this.state = 'closing';
 
+    const metaEls = Object.values(this.fields).filter(Boolean);
+    const gridItems = [...this.gridEl.children];
+
+    // Opened from the nav: there is no slide, so there is nothing to fit back
+    // into and — critically — no slide visibility to restore. Mirror of
+    // openDetached(), same reasoning as its comment.
+    if (!this.slide) {
+      this.tl = gsap
+        .timeline({ onComplete: () => this.reset() })
+        .to(
+          [...gridItems, ...metaEls],
+          { autoAlpha: 0, duration: 0.3, stagger: 0.015, ease: 'power1.out' },
+          0,
+        )
+        .to(this.closeBtns, { autoAlpha: 0, scale: 0.4, duration: 0.25, ease: 'power2.in' }, 0)
+        .to(
+          this.mediaBox,
+          { autoAlpha: 0, scale: 0.94, duration: CLOSE_DURATION, ease: 'power3.inOut' },
+          0.1,
+        )
+        .to(this.image, { scale: 1.12, duration: CLOSE_DURATION, ease: 'power3.inOut' }, 0.1);
+      return;
+    }
+
     const wrapper = this.slide.querySelector('.gallery__img-wrapper');
     const others = this.slides.filter((s) => s !== this.slide);
     const caption = this.slide.querySelector('figcaption');
-    const metaEls = Object.values(this.fields).filter(Boolean);
-    const gridItems = [...this.gridEl.children];
 
     this.tl = gsap
       .timeline({ onComplete: () => this.reset() })
@@ -216,6 +324,9 @@ export class Card {
     this.root.setAttribute('aria-hidden', 'true');
     gsap.set(this.mediaBox, { clearProps: 'all' });
     gsap.set(this.image, { clearProps: 'all' });
+    // Cleared too, or the next open inherits the last one's scale and the pop
+    // plays from 1 to 1 — invisible, and only on the second open onwards.
+    gsap.set(this.closeBtns, { clearProps: 'all' });
     this.unlockScroll();
 
     this.slide = null;

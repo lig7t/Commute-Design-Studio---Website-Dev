@@ -42,6 +42,28 @@ export function mountAnchors() {
   }
 }
 
+/* Which section the reader is currently in, and who wants to know.
+
+   One owner, because two things now depend on it: the nav links' aria-current,
+   and the project list below. A second IntersectionObserver watching the same
+   sections would be a second opinion about the same fact, and the two would
+   disagree at exactly the thresholds where it matters. Subscribers are called
+   immediately on subscribe so a late subscriber is never a frame behind. */
+let activeSection = null;
+const sectionSubscribers = new Set();
+
+function setActiveSection(id) {
+  if (id === activeSection) return;
+  activeSection = id;
+  for (const fn of sectionSubscribers) fn(id);
+}
+
+export function onSectionChange(fn) {
+  sectionSubscribers.add(fn);
+  fn(activeSection);
+  return () => sectionSubscribers.delete(fn);
+}
+
 export function mountNav() {
   const links = [...document.querySelectorAll('.ds-navlink[data-section]')];
   if (!links.length || !('IntersectionObserver' in window)) return;
@@ -67,6 +89,7 @@ export function mountNav() {
         if (best && link.dataset.section === best) link.setAttribute('aria-current', 'page');
         else link.removeAttribute('aria-current');
       }
+      setActiveSection(best);
     },
     { threshold: [0.15, 0.4, 0.7] },
   );
@@ -158,4 +181,66 @@ export function mountDrawer() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && isOpen) close();
   });
+}
+
+/* ---------- the section's own sub-list (the projects under "Interiors") ----
+
+   Generic on purpose. This function is handed a list of {index, title} and a
+   callback, and has no idea what a project, a gallery or a card is — which is
+   what keeps it inside the dependency rule in CLAUDE.md: components must not
+   import sections. main.js owns the coupling and passes the data down.
+
+   TWO SURFACES, TWO RULES.
+
+     Desktop   a panel under the nav link, shown while that section is the one
+               the reader is in, and also on hover/focus of the link so it is
+               reachable from anywhere on the page rather than only once you
+               have scrolled far enough to trigger it.
+     Drawer    a nested list, always present. The drawer is a menu the reader
+               deliberately opened; hiding half of it behind scroll position
+               would just be a worse menu.
+
+   BUTTONS, NOT LINKS. These open an overlay in place; they do not navigate and
+   there is no URL to give them. An <a href="#work"> that opened a card would
+   lie to middle-click, to "copy link", and to a screen reader. */
+export function mountNavProjects({ sectionId, items, onSelect } = {}) {
+  if (!sectionId || !items?.length || typeof onSelect !== 'function') return;
+
+  const build = (listClass, itemClass, closeDrawerOnPick) => {
+    const list = document.createElement('ul');
+    list.className = listClass;
+
+    for (const item of items) {
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = itemClass;
+      btn.textContent = item.title;
+      btn.addEventListener('click', () => {
+        if (closeDrawerOnPick) document.querySelector('[data-nav-burger]')?.click();
+        onSelect(item.index);
+      });
+      li.appendChild(btn);
+      list.appendChild(li);
+    }
+    return list;
+  };
+
+  // --- desktop ---
+  const navLink = document.querySelector(`.ds-navlink[data-section="${sectionId}"]`);
+  const host = navLink?.parentElement; // the <li>, which the CSS makes the containing block
+  if (host) {
+    const panel = build('ds-nav__projects', 'ds-nav__project');
+    host.appendChild(panel);
+    // Hover/focus is CSS (:hover / :focus-within on the li). This class is the
+    // scroll-driven half, and the two are OR'd in the stylesheet rather than
+    // here so the pointer path costs no JS at all.
+    onSectionChange((id) => host.classList.toggle('is-current-section', id === sectionId));
+  }
+
+  // --- drawer ---
+  const drawerLink = document.querySelector(`.ds-drawer__link[data-section="${sectionId}"]`);
+  if (drawerLink?.parentElement) {
+    drawerLink.parentElement.appendChild(build('ds-drawer__projects', 'ds-drawer__project', true));
+  }
 }
