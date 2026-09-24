@@ -56,6 +56,7 @@ export class Card {
        close paths ran. Flushed in reset(), which is the single point every
        close path funnels through. */
     this.closeWaiters = [];
+    this.closeFallbackId = 0;
 
     this.panel = this.root.querySelector('.card__panel');
 
@@ -246,6 +247,7 @@ export class Card {
         return;
       }
       this.tl.reverse();
+      this.armCloseFallback();
       return;
     }
     if (this.state !== 'open') return;
@@ -272,6 +274,7 @@ export class Card {
           0.1,
         )
         .to(this.image, { scale: 1.12, duration: CLOSE_DURATION, ease: 'power3.inOut' }, 0.1);
+      this.armCloseFallback();
       return;
     }
 
@@ -297,6 +300,31 @@ export class Card {
       .to(this.image, { scale: 1.2, duration: CLOSE_DURATION, ease: 'power3.inOut' }, 0.1)
       .to(others, { autoAlpha: 1, duration: 0.5, ease: 'power2.out' }, 0.45)
       .to(caption, { autoAlpha: 1, duration: 0.4, ease: 'power2.out' }, 0.5);
+    this.armCloseFallback();
+  }
+
+  /* The close animation is the only thing that calls reset(), and reset() is
+     what unlocks page scroll, restores the slide, and releases everyone waiting
+     on onceClosed() — including the mobile drawer, which stays hidden until it
+     resolves.
+
+     GSAP timelines advance on requestAnimationFrame, and rAF does not fire while
+     the document is hidden. A tab backgrounded mid-close would therefore be left
+     with the card on screen, the page unscrollable, the menu invisible, and
+     nothing running that could ever undo any of it.
+
+     Same shape and the same lesson as loader.js's exit: whatever can rescue the
+     page must OUTLIVE the step it is rescuing. So this is armed after the
+     timeline exists, and cleared inside reset() rather than before it. The delay
+     is read off the timeline's own measured duration instead of restating
+     CLOSE_DURATION and the stagger offsets, which would be a second opinion
+     about a number that lives three lines up. */
+  armCloseFallback() {
+    clearTimeout(this.closeFallbackId);
+    const seconds = (this.tl?.duration() ?? CLOSE_DURATION) + 0.35;
+    this.closeFallbackId = setTimeout(() => {
+      if (this.state !== 'closed') this.reset();
+    }, seconds * 1000);
   }
 
   /** Populate the card from the project data; wait for the image to decode
@@ -331,6 +359,15 @@ export class Card {
   }
 
   reset() {
+    /* Idempotent: reachable from onComplete, onReverseComplete and the fallback
+       above, and two of those can land for the same close if the timeline
+       finishes just after the timeout fired. After a reset, state is 'closed'
+       and tl is null — that pair is the marker, so no extra flag is needed. */
+    if (this.state === 'closed' && this.tl === null) return;
+
+    clearTimeout(this.closeFallbackId);
+    this.closeFallbackId = 0;
+
     if (this.slide) {
       const wrapper = this.slide.querySelector('.gallery__img-wrapper');
       delete wrapper.dataset.flipId;

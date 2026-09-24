@@ -980,8 +980,23 @@ export function initGallery() {
        caller's restore always runs. */
     openProject: async (index) => {
       if (!card) return;
-      const opened = await card.openDetached(index, projects[index]);
-      if (!opened) return;
+
+      /* NOT AWAITED, and that is the whole point. openDetached() is async and
+         returns its GSAP timeline — and GSAP timelines are THENABLE, so an
+         async function returning one has its promise adopt it. `await
+         card.openDetached(...)` therefore does not wait for the card to open;
+         it waits for the open ANIMATION to finish playing. In a backgrounded
+         tab rAF never fires, that animation never completes, and the await
+         never settles — so the drawer's restore in its finally never ran and
+         the menu stayed invisible. Verified: the card tore itself down via its
+         own fallback while this promise was still pending.
+
+         State is what we actually need, and openDetached sets it synchronously
+         before its first await, so by the time this line is reached the card is
+         already either 'opening' or still 'closed' (guarded). onceClosed()
+         reads exactly that and resolves immediately in the guarded case, so the
+         caller's restore always runs. */
+      void card.openDetached(index, projects[index]);
       await card.onceClosed();
     },
     canOpen: () => canCard,
