@@ -14,14 +14,32 @@
   padding:var(--space-9) var(--margin) var(--space-9);
   box-sizing:border-box;
 }
+/* Deliberately the same object as the gallery's "click me" pill — same pill
+   radius, same hairline, same surface, same micro type. The two are the only
+   free-floating controls that sit ON TOP of a photograph, so they read as one
+   component in two places rather than two lookalikes. Keep them in step: if
+   .gallery__hint's radius, border or padding changes, this changes with it.
+
+   It does NOT share the pill's scale/alpha animation from CSS — project-card.js
+   owns the pop on open, for the same one-writer reason the hint's transform
+   lives in ClickHint rather than in a stylesheet. */
 .card__close{
   position:sticky;top:var(--space-4);z-index:1;
   display:inline-block;
   margin-bottom:var(--space-6);
   padding:var(--space-2) var(--space-3);
+  border-radius:var(--radius-pill);
   border:var(--hairline) solid var(--rule);
   background:var(--surface);
+  /* The button carries .ds-micro, which brings the size, tracking, leading and
+     uppercasing. These three are what .ds-micro does NOT give it and the pill
+     does: the meta face, the structural weight, and the high-contrast ink —
+     .ds-micro sets color:var(--text-lo), which this outranks on source order
+     (project-card.css is imported after the design system). */
+  font-family:var(--font-meta);
+  font-weight:var(--weight-structural);
   color:var(--text-hi);
+  white-space:nowrap;
   cursor:pointer;
   transition:color var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out);
 }
