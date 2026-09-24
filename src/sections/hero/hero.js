@@ -345,3 +345,31 @@ export function closeSeam(stageST) {
   const current = parseFloat(getComputedStyle(el).marginTop) || 0;
   el.style.marginTop = `${current - gap}px`;
 }
+
+/** The scroll position at which the interiors are settled on screen.
+
+    WHY THIS IS NOT JUST `#work`'s OFFSET. `.work` is position:absolute inset:0
+    inside the pinned .stage, so its document offset is 0 — an anchor jump to
+    `#work` lands on the hero, not on the interiors. The interiors are not at a
+    place in the document at all; they are at a PROGRESS through the stage pin,
+    driven by that pin's onUpdate. So the only honest answer is to convert the
+    beat back into a scroll position using the pin's own measured range.
+
+    0.92 of the way through the slide-in rather than all of it: the transition
+    completes exactly at scatterBase on desktop (0.55 + 0.23 = 0.78 =
+    scatterBase), so landing on completion lands on the frame the section starts
+    flying apart. Stopping just short puts the reader on settled interiors in
+    both pacings — mobile's 0.7 + 0.15 * 0.92 = 0.838, comfortably below its
+    own scatterBase of 0.88.
+
+    Reads the pin's live start/end rather than recomputing from PIN.end, because
+    the pin's real range is what ScrollTrigger measured after closeSeam() and
+    any refresh — restating '+=500%' here would be a second opinion about it. */
+export function interiorsScrollY(stageST) {
+  if (!stageST) return 0;
+  const mobile = window.matchMedia(MOBILE_QUERY).matches;
+  const timeline = mobile ? MOBILE_TIMELINE : TIMELINE;
+  const span = stageST.end - stageST.start;
+  const settled = timeline.transitionStart + timeline.transitionSpan * 0.92;
+  return Math.round(stageST.start + settled * span);
+}

@@ -969,9 +969,21 @@ export function initGallery() {
      CLAUDE.md, components must not import sections. */
   const api = {
     projects: projects.map((project, index) => ({ index, title: project.title })),
-    // Detached on purpose — see Card.openDetached for why a nav-driven open
-    // must not morph from, or write to, a slide.
-    openProject: (index) => card?.openDetached(index, projects[index]),
+    /* Detached on purpose — see Card.openDetached for why a nav-driven open
+       must not morph from, or write to, a slide.
+
+       Resolves when the card has CLOSED, not when it has opened. The mobile
+       drawer awaits this to know when to bring itself back, and expressing it
+       as "the thing you opened is finished" is what lets navigation.js stay
+       generic — it never learns that a card exists. A guarded open (already
+       open, no project) resolves straight away rather than hanging, so the
+       caller's restore always runs. */
+    openProject: async (index) => {
+      if (!card) return;
+      const opened = await card.openDetached(index, projects[index]);
+      if (!opened) return;
+      await card.onceClosed();
+    },
     canOpen: () => canCard,
   };
 

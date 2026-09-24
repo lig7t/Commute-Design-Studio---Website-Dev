@@ -221,7 +221,10 @@
     backdrop-filter:none;
   }
   .ds-drawer__backdrop{
-    background:var(--surface);
+    /* Only the filter goes. The 92% translucency stays: it is what lets the
+       page show faintly behind the menu, which now matters — tapping
+       "Interiors" scrolls the background to the section, and that should be
+       visible happening rather than hidden behind an opaque sheet. */
     -webkit-backdrop-filter:none;
     backdrop-filter:none;
   }

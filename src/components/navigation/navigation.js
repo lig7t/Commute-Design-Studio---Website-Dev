@@ -8,6 +8,7 @@
    ============================================================ */
 
 import { gsap, hasGsap, reduced } from '../../lib/motion.js';
+import { lockScroll, unlockScroll } from '../../lib/scroll-lock.js';
 
 export function mountNavHeight() {
   const nav = document.querySelector('.ds-nav');
@@ -30,6 +31,15 @@ export function mountAnchors() {
     a.addEventListener('click', (e) => {
       const id = a.getAttribute('href');
       if (!id || id === '#') return;
+      /* A link that owns a drawer sub-view is not a jump link any more — it
+         opens a menu level, and mountNavProjects scrolls the background itself
+         to a place this generic handler cannot compute. Checked at click time,
+         not bind time, because the attribute is added later.
+
+         It matters concretely: #work resolves to document y=0, because .work is
+         absolutely positioned inside the pinned stage. Letting this run would
+         scroll the page to the TOP while the reader was asking for interiors. */
+      if (a.hasAttribute('aria-expanded')) return;
       const el = document.querySelector(id);
       if (!el) return;
       e.preventDefault();
@@ -110,6 +120,26 @@ export function onDrawerClose(fn) {
   return () => drawerCloseHooks.delete(fn);
 }
 
+/* Suspend/resume, as opposed to close/open.
+
+   The drawer has to get out of the way while a project card is up and come
+   back when it goes, WITHOUT unwinding: isOpen stays true, the sub-view stays
+   on level two, and the close hooks do not run — so the reader returns to the
+   project list they picked from rather than to the top of the menu.
+
+   Assigned by mountDrawer() because the real work needs its closure (isOpen,
+   the panel, the lock). Exported as thin wrappers so callers do not have to
+   care whether the drawer was ever mounted. */
+let suspendImpl = null;
+let resumeImpl = null;
+
+export function suspendDrawer() {
+  suspendImpl?.();
+}
+export function resumeDrawer() {
+  resumeImpl?.();
+}
+
 export function mountDrawer() {
   const burger = document.querySelector('[data-nav-burger]');
   const drawer = document.querySelector('[data-nav-drawer]');
@@ -121,6 +151,12 @@ export function mountDrawer() {
   const socialLinks = drawer.querySelectorAll('.ds-drawer__social-link');
   const toggle = drawer.querySelector('.ds-toggle--drawer');
   let isOpen = false;
+  /* Declared up here with isOpen, not beside suspendImpl below, because the
+     Escape handler closes over it. Same class of ordering hazard as the
+     reveal.js TDZ bug: harmless today only because nothing reads it before
+     this line runs, which is exactly the kind of "fine until it isn't" this
+     repo has already paid for once. */
+  let suspended = false;
   const mq = matchMedia('(max-width:760px)');
 
   const rule = drawer.querySelector('.ds-drawer__rule');
@@ -140,7 +176,7 @@ export function mountDrawer() {
     drawer.setAttribute('aria-hidden', 'false');
     burger.setAttribute('aria-expanded', 'true');
     burger.setAttribute('aria-label', 'Close menu');
-    document.documentElement.style.overflow = 'hidden';
+    lockScroll();
 
     gsap.set(drawer, { pointerEvents: 'auto' });
     gsap.to(backdrop, { autoAlpha: 1, duration: 0.4, ease: 'power2.out' });
@@ -170,7 +206,7 @@ export function mountDrawer() {
     drawer.setAttribute('aria-hidden', 'true');
     burger.setAttribute('aria-expanded', 'false');
     burger.setAttribute('aria-label', 'Open menu');
-    document.documentElement.style.overflow = '';
+    unlockScroll();
 
     gsap.to(backdrop, {
       autoAlpha: 0,
@@ -189,12 +225,42 @@ export function mountDrawer() {
 
   backdrop?.addEventListener('click', close);
 
-  links.forEach((link) => link.addEventListener('click', () => close()));
+  links.forEach((link) =>
+    link.addEventListener('click', () => {
+      // A link that owns a sub-view opens a menu level instead of navigating,
+      // so closing here would shut the menu the reader just drilled into.
+      if (link.hasAttribute('aria-expanded')) return;
+      close();
+    }),
+  );
   socialLinks.forEach((link) => link.addEventListener('click', () => close()));
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && isOpen) close();
+    // Not while suspended: the card is on top and owns Escape. Both closing at
+    // once would race the card's resume against the drawer's teardown.
+    if (e.key === 'Escape' && isOpen && !suspended) close();
   });
+
+  /* Step aside for an overlay, and come back when it has gone. isOpen is
+     untouched, the close hooks do not run, and the sub-view keeps its level —
+     so the reader lands back on the project list they picked from. */
+  suspendImpl = () => {
+    if (!isOpen || suspended) return;
+    suspended = true;
+    drawer.setAttribute('aria-hidden', 'true');
+    burger.setAttribute('aria-expanded', 'false');
+    gsap.set(drawer, { pointerEvents: 'none' });
+    gsap.to(drawer, { autoAlpha: 0, duration: 0.25, ease: 'power2.in' });
+  };
+
+  resumeImpl = () => {
+    if (!isOpen || !suspended) return;
+    suspended = false;
+    drawer.setAttribute('aria-hidden', 'false');
+    burger.setAttribute('aria-expanded', 'true');
+    gsap.set(drawer, { pointerEvents: 'auto' });
+    gsap.to(drawer, { autoAlpha: 1, duration: 0.3, ease: 'power2.out' });
+  };
 }
 
 /* ---------- the section's own sub-list (the projects under "Interiors") ----
@@ -221,10 +287,10 @@ export function mountDrawer() {
    BUTTONS, NOT LINKS. These open an overlay in place; they do not navigate and
    there is no URL to give them. An <a href="#work"> that opened a card would
    lie to middle-click, to "copy link", and to a screen reader. */
-export function mountNavProjects({ sectionId, items, onSelect } = {}) {
+export function mountNavProjects({ sectionId, items, onSelect, onSectionOpen } = {}) {
   if (!sectionId || !items?.length || typeof onSelect !== 'function') return;
 
-  const build = (listClass, itemClass, closeDrawerOnPick) => {
+  const build = (listClass, itemClass, insideDrawer) => {
     const list = document.createElement('ul');
     list.className = listClass;
 
@@ -234,9 +300,25 @@ export function mountNavProjects({ sectionId, items, onSelect } = {}) {
       btn.type = 'button';
       btn.className = itemClass;
       btn.textContent = item.title;
-      btn.addEventListener('click', () => {
-        if (closeDrawerOnPick) document.querySelector('[data-nav-burger]')?.click();
-        onSelect(item.index);
+      btn.addEventListener('click', async () => {
+        /* In the drawer the menu does NOT close — it stands aside for the card
+           and comes back when the card does. onSelect resolves on close, which
+           is the whole reason it is a promise: this code never learns that a
+           card exists, only that the thing it opened has finished.
+
+           try/finally, because a rejected or guarded open must still give the
+           reader their menu back rather than leaving it invisible with the
+           scroll still locked. */
+        if (!insideDrawer) {
+          onSelect(item.index);
+          return;
+        }
+        suspendDrawer();
+        try {
+          await onSelect(item.index);
+        } finally {
+          resumeDrawer();
+        }
       });
       li.appendChild(btn);
       list.appendChild(li);
@@ -317,14 +399,26 @@ export function mountNavProjects({ sectionId, items, onSelect } = {}) {
     // surface that renders it, and the drawer is mobile-only.
     e.preventDefault();
     showSub(true);
+    /* Move the page behind the open menu, so dismissing the menu leaves the
+       reader on the section they asked for rather than wherever they were.
+       Delegated: #work's own offset is 0 (it is absolutely positioned inside
+       the pinned stage), so the real target is a progress through that pin,
+       which only the hero can compute. Scrolling works even though the drawer
+       holds the page — overflow:hidden stops the reader scrolling, not us. */
+    onSectionOpen?.();
   });
   back.addEventListener('click', () => showSub(false));
   // Picking "All <section>" navigates for real, so the menu must not be left
   // parked on level two for the next open.
-  all.addEventListener('click', () => {
+  all.addEventListener('click', (e) => {
+    // Never bound by mountAnchors — it was created after that ran — so the
+    // scroll is ours to do, and the href stays for semantics and no-JS.
+    e.preventDefault();
     rootView.hidden = false;
     sub.hidden = true;
     drawerLink.setAttribute('aria-expanded', 'false');
+    document.querySelector('[data-nav-burger]')?.click(); // closes the drawer
+    onSectionOpen?.();
   });
 
   /* Reset on close, without focus moving. The drawer going away is not a

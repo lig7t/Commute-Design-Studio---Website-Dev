@@ -9,7 +9,7 @@
    inside the loadWorks() chain.
    ============================================================ */
 
-import { ScrollTrigger, hasGsap, reduced } from './lib/motion.js';
+import { gsap, ScrollTrigger, hasGsap, reduced } from './lib/motion.js';
 import { initTheme } from './lib/theme.js';
 import { mountMedia, decodeAll } from './lib/media.js';
 import { loadWorks } from './lib/works.js';
@@ -26,7 +26,7 @@ import {
   mountDrawer,
 } from './components/navigation/navigation.js';
 
-import { mountReel, closeSeam, pickHeroFrames } from './sections/hero/hero.js';
+import { mountReel, closeSeam, pickHeroFrames, interiorsScrollY } from './sections/hero/hero.js';
 import { initGallery } from './sections/gallery/gallery.js';
 
 // First, before anything else: the boot screen has to cover the whole mount,
@@ -68,6 +68,19 @@ loadWorks()
         sectionId: 'work',
         items: gallery.projects,
         onSelect: gallery.openProject,
+        /* Where "Interiors" actually lives. The nav cannot work this out: the
+           section's document offset is 0 because .work is absolutely positioned
+           inside the pinned stage, so the real destination is a progress
+           through that pin. hero.js owns that arithmetic and the two pacings it
+           depends on; this is the seam where the two meet. */
+        onSectionOpen: () => {
+          const y = interiorsScrollY(stageST);
+          if (hasGsap && !reduced && gsap?.plugins?.scrollTo) {
+            gsap.to(window, { duration: 1.15, ease: 'power2.inOut', scrollTo: { y } });
+          } else {
+            window.scrollTo(0, y);
+          }
+        },
       });
     }
     // mountParallax() also needs both pins already in the DOM — same reason.
