@@ -5,7 +5,9 @@
    slides the interiors section in from the left. The effect is one
    continuous viewport that transforms between hero and work.
 
-   Every timing constant lives in hero.config.js.
+   Every timing constant lives in hero.config.js, in two pacings — desktop and
+   mobile. mountReel() resolves exactly one of them at mount and binds it to a
+   local; nothing below the top of that function branches on viewport.
 
    closeSeam() lives here too: it depends on the pin this module creates
    and must run before the gallery builds its own pin.
@@ -16,14 +18,24 @@ import { DRIFT } from '../../lib/config.js';
 import { splitWords } from '../../lib/text.js';
 import { getTheme, onThemeChange } from '../../lib/theme.js';
 import { createReel } from './hero-reel.js';
-import { HERO_REEL_IDS, PIN, TIMELINE, SETTLE_DRIFT_PX, IMG_DRIFT } from './hero.config.js';
+import {
+  HERO_REEL_IDS,
+  MOBILE_QUERY,
+  PIN,
+  MOBILE_PIN,
+  TIMELINE,
+  MOBILE_TIMELINE,
+  SETTLE_DRIFT_PX,
+  IMG_DRIFT,
+  MOBILE_IMG_DRIFT,
+} from './hero.config.js';
 
 export function pickHeroFrames(works) {
   if (!works.length) return works;
   const byId = new Map(works.map((w) => [w.id, w]));
   const picked = HERO_REEL_IDS.map((id) => byId.get(id)).filter(Boolean);
   const frames = picked.length ? picked : works.slice(0, 10);
-  const mobile = window.matchMedia('(max-width: 760px)').matches;
+  const mobile = window.matchMedia(MOBILE_QUERY).matches;
   return mobile ? frames.slice(0, 3) : frames;
 }
 
@@ -46,6 +58,19 @@ export async function mountReel(works) {
   const heroEl = document.querySelector('.hero');
   const workEl = document.querySelector('.work');
   if (!canvas || !stage || !works.length) return null;
+
+  // Resolve the pacing ONCE, here, and bind it to locals the onUpdate closes
+  // over. The per-tick body must never branch on viewport or call matchMedia:
+  // a media query evaluated per frame is both a needless cost and a source of
+  // a mid-scroll discontinuity, since a rotation or a resize would swap
+  // timelines underneath a progress value that was scrubbed against the other
+  // one. Resizing across the breakpoint re-paces on the next mount, not
+  // mid-pin — the same coarse behaviour pickHeroFrames() already has for the
+  // reel's frame count, which reads the same MOBILE_QUERY.
+  const mobile = window.matchMedia(MOBILE_QUERY).matches;
+  const timeline = mobile ? MOBILE_TIMELINE : TIMELINE;
+  const pinCfg = mobile ? MOBILE_PIN : PIN;
+  const imgDrift = mobile ? MOBILE_IMG_DRIFT : IMG_DRIFT;
 
   const reel = createReel({
     canvas,
@@ -121,9 +146,19 @@ export async function mountReel(works) {
 
   // The exit — a deterministic seeded trajectory per element, stored as
   // viewport-relative vectors and resolved to px per frame (so a resize needs
-  // no recompute). Reveal owns 60→78% of the pin; the scatter owns 78→~97%,
-  // finishing early rather than at 1.0 so scrub's lag can't leave debris
-  // mid-flight once the gallery's pin occludes the stage (see closeSeam()).
+  // no recompute). On the desktop pacing reveal owns 60→78% of the pin and the
+  // scatter owns 78→~97%, finishing early rather than at 1.0 so scrub's lag
+  // can't leave debris mid-flight once the gallery's pin occludes the stage
+  // (see closeSeam()).
+  //
+  // `stag` scales the item's index by timeline.scatterStagger rather than by a
+  // constant here: the last item's window is scatterBase + scatterStagger →
+  // + scatterSpan, so the reach is one of the three terms that decide whether
+  // the exit finishes inside the pin. A literal in this file would leave that
+  // sum unbalanceable from the pacing objects where the rest of it lives —
+  // which is exactly how the mobile pacing came to overrun the end of its pin.
+  // Both pacings verify to 0.97; the arithmetic is recorded on
+  // TIMELINE/MOBILE_TIMELINE.scatterStagger in hero.config.js.
   const traj = workItems.map((el, i) => {
     const rnd = mulberry32((i + 1) * 0x9e3779b1);
     const angle = rnd() * Math.PI * 2;
@@ -133,7 +168,7 @@ export async function mountReel(works) {
       ay: Math.sin(angle) * reach,
       rot: (rnd() * 2 - 1) * (8 + rnd() * 12), // ±8–20°
       scale: 0.85 + rnd() * 0.25, // 0.85–1.10× — scale carries the depth cue
-      stag: N > 1 ? (i / (N - 1)) * 0.08 : 0, // staggered — debris, not a wipe
+      stag: N > 1 ? (i / (N - 1)) * timeline.scatterStagger : 0, // debris, not a wipe
       // Once revealed, each item drifts toward its OWN scatter direction at a
       // small fraction of that trajectory — a whisper of depth while the
       // section is settled, before the scatter takes over.
@@ -149,14 +184,13 @@ export async function mountReel(works) {
   gsap.set(workEl, { xPercent: 100, opacity: 0 });
   workItems.forEach((el) => gsap.set(el, { opacity: 0, y: 24 }));
 
-  const mobile = window.matchMedia('(max-width: 760px)').matches;
   const stageST = ScrollTrigger.create({
     trigger: stage,
     start: 'top top',
-    end: mobile ? '+=300%' : PIN.end,
+    end: pinCfg.end,
     pin: true,
     pinSpacing: true,
-    scrub: PIN.scrub,
+    scrub: pinCfg.scrub,
     onUpdate: (self) => {
       const p = self.progress;
       const vw = window.innerWidth,
@@ -166,11 +200,11 @@ export async function mountReel(works) {
       if (p > 0.001 && heroIntro.isActive()) heroIntro.kill();
 
       // Reel plays, then flattens into a band.
-      reel.setProgress(Math.min(p / TIMELINE.reelPlayEnd, 1) * 0.5);
+      reel.setProgress(Math.min(p / timeline.reelPlayEnd, 1) * 0.5);
       reel.setFlat(
-        p < TIMELINE.reelPlayEnd
+        p < timeline.reelPlayEnd
           ? 0
-          : Math.min((p - TIMELINE.reelPlayEnd) / TIMELINE.flattenSpan, 1),
+          : Math.min((p - timeline.reelPlayEnd) / timeline.flattenSpan, 1),
       );
 
       // Hero elements fade up and disappear together, led into by a slow
@@ -178,19 +212,19 @@ export async function mountReel(works) {
       // heroPreDrift in hero.config.js).
       if (heroFade.length) {
         const t =
-          p < TIMELINE.heroFadeStart
+          p < timeline.heroFadeStart
             ? 0
-            : Math.min((p - TIMELINE.heroFadeStart) / TIMELINE.heroFadeSpan, 1);
-        const pre = Math.min(p / TIMELINE.heroFadeStart, 1) * TIMELINE.heroPreDrift;
-        if (heroType) gsap.set(heroType, { opacity: 1 - t, y: pre + t * TIMELINE.heroExitDrift });
+            : Math.min((p - timeline.heroFadeStart) / timeline.heroFadeSpan, 1);
+        const pre = Math.min(p / timeline.heroFadeStart, 1) * timeline.heroPreDrift;
+        if (heroType) gsap.set(heroType, { opacity: 1 - t, y: pre + t * timeline.heroExitDrift });
         if (heroReg) gsap.set(heroReg, { opacity: 1 - t });
       }
 
       // Canvas fades out, interiors slides in from the right.
       const trans =
-        p < TIMELINE.transitionStart
+        p < timeline.transitionStart
           ? 0
-          : Math.min((p - TIMELINE.transitionStart) / TIMELINE.transitionSpan, 1);
+          : Math.min((p - timeline.transitionStart) / timeline.transitionSpan, 1);
       gsap.set(canvas, { opacity: 1 - trans });
       gsap.set(workEl, { xPercent: 100 - trans * 100, opacity: trans });
 
@@ -198,14 +232,16 @@ export async function mountReel(works) {
       // own seeded trajectory.
       workItems.forEach((el, i) => {
         const tr = traj[i];
-        if (p < TIMELINE.scatterBase) {
+        if (p < timeline.scatterBase) {
           // Small enough that even the last item's reveal window
           // (revealStart + revealSpan) safely lands before scatterBase —
           // otherwise its scatter branch takes over before its OWN reveal
           // finishes, snapping opacity/position rather than continuing
-          // from wherever the reveal had actually gotten to.
-          const revealStart = TIMELINE.revealStart + i * TIMELINE.revealStagger;
-          const revealSpan = TIMELINE.revealSpan;
+          // from wherever the reveal had actually gotten to. The arithmetic is
+          // verified per pacing where the numbers live — see the notes on
+          // TIMELINE/MOBILE_TIMELINE.revealStagger in hero.config.js.
+          const revealStart = timeline.revealStart + i * timeline.revealStagger;
+          const revealSpan = timeline.revealSpan;
           const t = p < revealStart ? 0 : Math.min((p - revealStart) / revealSpan, 1);
           const eased = 1 - Math.pow(1 - t, 3);
 
@@ -213,7 +249,7 @@ export async function mountReel(works) {
           // direction at a small fraction of it — settles to exactly the
           // scatter branch's own starting offset (see settleFade below),
           // so there's no snap at the handoff between the two branches.
-          const settleWindow = Math.max(TIMELINE.scatterBase - (revealStart + revealSpan), 0.001);
+          const settleWindow = Math.max(timeline.scatterBase - (revealStart + revealSpan), 0.001);
           const settleT = Math.min(Math.max((p - (revealStart + revealSpan)) / settleWindow, 0), 1);
           const driftX = tr.ax * SETTLE_DRIFT_PX * tr.pFactor * settleT;
           const driftY = tr.ay * SETTLE_DRIFT_PX * tr.pFactor * settleT;
@@ -252,7 +288,7 @@ export async function mountReel(works) {
           }
         } else {
           const s = Math.min(
-            Math.max((p - TIMELINE.scatterBase - tr.stag) / TIMELINE.scatterSpan, 0),
+            Math.max((p - timeline.scatterBase - tr.stag) / timeline.scatterSpan, 0),
             1,
           );
           const e = s * s * s;
@@ -275,7 +311,7 @@ export async function mountReel(works) {
       // rather than a second ScrollTrigger, for the same reason the settle
       // drift above does — no second scrub layer to desync from this one.
       if (workImgs.length) {
-        const tp = Math.min(Math.max((p - IMG_DRIFT.start) / IMG_DRIFT.span, 0), 1);
+        const tp = Math.min(Math.max((p - imgDrift.start) / imgDrift.span, 0), 1);
         workImgs.forEach((img, i) => {
           img.style.setProperty('--drift', `${(1 - 2 * tp) * DRIFT * imgFactor[i]}%`);
         });
