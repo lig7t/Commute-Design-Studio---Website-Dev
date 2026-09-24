@@ -23,6 +23,56 @@
   transition:background var(--dur-base) var(--ease-out),
              border-color var(--dur-base) var(--ease-out);
 }
+
+/* ---------- hidden until asked for ----------
+
+   The bar parks off the top of the viewport and comes down on hover. All three
+   conditions on the query are load-bearing, not tidiness:
+
+     hover/pointer  a touch device has no hover, so hiding the bar there would
+                    hide the burger with it and leave no route to the menu.
+     min-width      below 760px the burger is the menu (see the narrow block
+                    further down), and that layout must never be behind a
+                    hover. A narrow desktop window reports a fine pointer, so
+                    the pointer query alone would have hidden the bar in the
+                    one layout that depends on it being there.
+
+   :focus-within is not optional either. The bar is still in the tab order
+   while parked, so without it a keyboard reader would move focus into a
+   wordmark and three links they cannot see.
+
+   THE HOVER TARGET. A bar that is off screen cannot be hovered, so it carries
+   its own catcher: ::after sits directly below the bar's box, which — while
+   the bar is translated up by its own height — is exactly the top strip of the
+   viewport. Hovering there brings the bar down, and once down the strip is
+   underneath it and keeps the hover alive as the pointer travels, so the bar
+   does not flicker away between the strip and itself. It shrinks when the bar
+   is out, because at that point it is overlaying page content and only needs
+   to be a buffer rather than a target. */
+@media (hover: hover) and (pointer: fine) and (min-width: 761px){
+  .ds-nav{
+    transform:translateY(-100%);
+    transition:transform var(--dur-base) var(--ease-out),
+               background var(--dur-base) var(--ease-out),
+               border-color var(--dur-base) var(--ease-out);
+  }
+  .ds-nav::after{
+    content:'';
+    position:absolute;
+    top:100%;left:0;right:0;
+    height:var(--nav-reveal-zone, 40px);
+  }
+  .ds-nav:hover,
+  .ds-nav:focus-within{transform:translateY(0)}
+  .ds-nav:hover::after,
+  .ds-nav:focus-within::after{height:var(--space-4)}
+
+  /* Reduced motion keeps the behaviour and drops the travel — the bar still
+     hides and still appears, it just does not slide. */
+  @media (prefers-reduced-motion: reduce){
+    .ds-nav{transition:none}
+  }
+}
 .ds-nav__inner{
   max-width:var(--maxw);margin-inline:auto;padding-inline:var(--margin);
   display:flex;align-items:center;justify-content:space-between;
@@ -159,7 +209,22 @@
    order is what makes these win. */
 
 @media(max-width:760px){
-  .ds-nav{background:var(--surface)}
+  /* Opaque here, so the inherited backdrop-filter is buying nothing and
+     costing a full-width blurred layer that the compositor re-evaluates on
+     every scroll frame. Dropping it is one of the cheapest wins available on
+     a phone. Same reasoning for the drawer backdrop below — it sits at 92%
+     opacity over the page, where 24px of blur is very nearly invisible and
+     very far from free. */
+  .ds-nav{
+    background:var(--surface);
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+  }
+  .ds-drawer__backdrop{
+    background:var(--surface);
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+  }
   .ds-nav__inner{padding-block:var(--space-2)}
   .ds-nav__inner > nav{display:none}
   .ds-nav__inner > .ds-toggle--bar{display:none}
@@ -237,9 +302,50 @@
 .ds-nav__project:hover,
 .ds-nav__project:focus-visible{color:var(--accent)}
 
-/* Drawer: a nested list, always present. Indented and stepped down in size so
-   it reads as subordinate to the "Interiors" link above it rather than as a
-   fourth peer of Interiors / About / Contact. */
+/* Drawer level two: the breadcrumb, the "all" link, and the project list.
+   Shown only when the reader taps the section's link — never by scroll
+   position. navigation.js owns the `hidden` attribute on this and on the
+   top-level nav; CSS never hides either, so there is exactly one writer. */
+.ds-drawer__sub{display:flex;flex-direction:column}
+.ds-drawer__sub[hidden]{display:none}
+
+.ds-drawer__crumbs{margin-bottom:var(--space-5)}
+.ds-drawer__crumbs ol{
+  list-style:none;margin:0;padding:0;
+  display:flex;align-items:center;gap:var(--space-2);
+  flex-wrap:wrap;
+}
+/* The separator is generated, so the markup stays a clean list and the
+   character never ends up selectable or read out as content. */
+.ds-drawer__crumbs li + li::before{
+  content:'/';
+  margin-right:var(--space-2);
+  color:var(--text-lo);
+}
+.ds-drawer__crumb,
+.ds-drawer__crumb-current{
+  font-family:var(--font-meta);
+  font-size:var(--size-meta);
+  font-weight:var(--weight-structural);
+  letter-spacing:var(--track-meta);
+  text-transform:uppercase;
+  line-height:var(--leading-micro);
+}
+.ds-drawer__crumb{
+  background:none;border:0;padding:var(--space-2) 0;
+  cursor:pointer;color:var(--text-lo);
+  transition:color var(--dur-fast) var(--ease-out);
+}
+.ds-drawer__crumb:hover,
+.ds-drawer__crumb:focus-visible{color:var(--accent)}
+.ds-drawer__crumb-current{color:var(--text-hi)}
+
+/* Visually the same tier as the top-level links, because it does the same
+   thing they do — it goes to the section. */
+.ds-drawer__link--all{margin-bottom:var(--space-3)}
+
+/* The project list. Indented and stepped down so it reads as subordinate to
+   the breadcrumb above it rather than as a peer of the main menu items. */
 .ds-drawer__projects{
   list-style:none;
   margin:0 0 var(--space-4);
@@ -268,8 +374,8 @@
 .ds-drawer__project:focus-visible{color:var(--accent)}
 
 @media(min-width:761px){
-  /* The drawer never opens above this width, but its list is in the DOM. */
-  .ds-drawer__projects{display:none}
+  /* The drawer never opens above this width, but its markup is in the DOM. */
+  .ds-drawer__sub{display:none}
 }
 @media(max-width:760px){
   /* No hover panel on touch — the drawer's nested list is the mobile answer. */

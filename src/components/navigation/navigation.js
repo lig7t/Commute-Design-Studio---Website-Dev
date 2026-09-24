@@ -97,6 +97,19 @@ export function mountNav() {
   sections.forEach((s) => io.observe(s));
 }
 
+/* Anything that needs to unwind when the drawer closes. A Set rather than a
+   single callback because the drawer is shared furniture and more than one
+   feature can own state inside it; mountNavProjects uses this to put the menu
+   back on its top level. Registered before mountDrawer() runs in some orders
+   and after in others, so the Set lives at module scope rather than inside
+   either function. */
+const drawerCloseHooks = new Set();
+
+export function onDrawerClose(fn) {
+  drawerCloseHooks.add(fn);
+  return () => drawerCloseHooks.delete(fn);
+}
+
 export function mountDrawer() {
   const burger = document.querySelector('[data-nav-burger]');
   const drawer = document.querySelector('[data-nav-drawer]');
@@ -153,6 +166,7 @@ export function mountDrawer() {
   const close = () => {
     if (!isOpen) return;
     isOpen = false;
+    for (const fn of drawerCloseHooks) fn();
     drawer.setAttribute('aria-hidden', 'true');
     burger.setAttribute('aria-expanded', 'false');
     burger.setAttribute('aria-label', 'Open menu');
@@ -196,9 +210,13 @@ export function mountDrawer() {
                the reader is in, and also on hover/focus of the link so it is
                reachable from anywhere on the page rather than only once you
                have scrolled far enough to trigger it.
-     Drawer    a nested list, always present. The drawer is a menu the reader
-               deliberately opened; hiding half of it behind scroll position
-               would just be a worse menu.
+     Drawer    a second level the reader has to ask for. Tapping the section's
+               link opens a sub-view listing its projects, with a breadcrumb
+               back to the top-level menu. It is NEVER opened by scroll
+               position — on a phone the menu is a place you went on purpose,
+               and finding it already two levels deep because of where the
+               page happened to be scrolled is disorienting. The section-active
+               signal drives the desktop panel and nothing else.
 
    BUTTONS, NOT LINKS. These open an overlay in place; they do not navigate and
    there is no URL to give them. An <a href="#work"> that opened a card would
@@ -238,9 +256,84 @@ export function mountNavProjects({ sectionId, items, onSelect } = {}) {
     onSectionChange((id) => host.classList.toggle('is-current-section', id === sectionId));
   }
 
-  // --- drawer ---
+  // --- drawer: a second level, reached on purpose ---
   const drawerLink = document.querySelector(`.ds-drawer__link[data-section="${sectionId}"]`);
-  if (drawerLink?.parentElement) {
-    drawerLink.parentElement.appendChild(build('ds-drawer__projects', 'ds-drawer__project', true));
-  }
+  const rootView = drawerLink?.closest('nav');
+  const panel = drawerLink?.closest('.ds-drawer__panel');
+  if (!drawerLink || !rootView || !panel) return;
+
+  const sub = document.createElement('div');
+  sub.className = 'ds-drawer__sub';
+  sub.hidden = true;
+
+  /* A real <nav>/<ol> breadcrumb rather than a lone back arrow: it says where
+     you are as well as offering the way out, which is the whole point of
+     asking for breadcrumbs on a menu that can now be two deep. */
+  const crumbNav = document.createElement('nav');
+  crumbNav.className = 'ds-drawer__crumbs';
+  crumbNav.setAttribute('aria-label', 'Breadcrumb');
+  const crumbList = document.createElement('ol');
+
+  const backLi = document.createElement('li');
+  const back = document.createElement('button');
+  back.type = 'button';
+  back.className = 'ds-drawer__crumb';
+  back.textContent = 'Menu';
+  backLi.appendChild(back);
+
+  const hereLi = document.createElement('li');
+  hereLi.className = 'ds-drawer__crumb-current';
+  hereLi.setAttribute('aria-current', 'page');
+  hereLi.textContent = drawerLink.textContent.trim();
+
+  crumbList.append(backLi, hereLi);
+  crumbNav.appendChild(crumbList);
+
+  /* The section itself is still reachable. Tapping the top-level link now
+     opens this view instead of navigating, so the navigation it used to do has
+     to reappear somewhere or it is simply lost — a reader who wants the
+     section rather than one project would otherwise have no route to it. */
+  const all = document.createElement('a');
+  all.className = 'ds-drawer__link ds-drawer__link--all';
+  all.href = `#${sectionId}`;
+  all.textContent = `All ${drawerLink.textContent.trim().toLowerCase()}`;
+
+  sub.append(crumbNav, all, build('ds-drawer__projects', 'ds-drawer__project', true));
+  panel.insertBefore(sub, rootView.nextSibling);
+
+  const showSub = (on) => {
+    rootView.hidden = on;
+    sub.hidden = !on;
+    drawerLink.setAttribute('aria-expanded', String(on));
+    // Focus follows the view, or a keyboard reader is left on a control that
+    // is now display:none and loses their place entirely.
+    if (on) back.focus();
+    else drawerLink.focus();
+  };
+
+  drawerLink.setAttribute('aria-expanded', 'false');
+  drawerLink.addEventListener('click', (e) => {
+    // Only intercepts where the second level exists. The drawer is the only
+    // surface that renders it, and the drawer is mobile-only.
+    e.preventDefault();
+    showSub(true);
+  });
+  back.addEventListener('click', () => showSub(false));
+  // Picking "All <section>" navigates for real, so the menu must not be left
+  // parked on level two for the next open.
+  all.addEventListener('click', () => {
+    rootView.hidden = false;
+    sub.hidden = true;
+    drawerLink.setAttribute('aria-expanded', 'false');
+  });
+
+  /* Reset on close, without focus moving. The drawer going away is not a
+     "back" gesture — the reader should simply find the menu at its top level
+     next time they open it, and calling showSub(false) here would yank focus
+     onto a link inside a drawer that is closing. */
+  onDrawerClose(() => {
+    rootView.hidden = false;
+    sub.hidden = true;
+    drawerLink.setAttribute('aria-expanded', 'false');
+  });
 }
