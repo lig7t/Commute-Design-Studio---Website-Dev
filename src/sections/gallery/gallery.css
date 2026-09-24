@@ -74,6 +74,52 @@
   object-fit:cover;
   transform:translate3d(0,var(--drift),0) scale(var(--img-scale));
 }
+/* ---------- the "click me" hint bubble (first slide only) ----------
+   Built in JS by ClickHint in gallery.js, which appends it inside the first
+   .gallery__img-wrapper — see the long note there for why the picture and not
+   the slide box owns it.
+
+   Positioned by inset, never by a transform: ClickHint animates scale on this
+   element and on .gallery__hint-label, and a positioning transform here would
+   compose into the same matrix and fight it. Inset by --space-3 on both edges
+   so the wrapper's overflow:hidden never clips the pill.
+
+   position:absolute is load-bearing, not cosmetic: Gallery.measure() takes the
+   slide's rect height and the loop multiplies it by yPercents reaching ±1600%,
+   so anything here that contributed to layout would land ~16x amplified as
+   phantom loop travel.
+
+   pointer-events:none is likewise not optional — the slide itself is the
+   control (role="button" + tabindex, wired in wireCard), and a decorative pill
+   sitting over it must not be able to swallow the click it is advertising. */
+.gallery__hint{
+  position:absolute;
+  right:var(--space-3);
+  bottom:var(--space-3);
+  z-index:1; /* above the absolutely-positioned, scaled <img> beneath it */
+  padding:var(--space-2) var(--space-3);
+  border-radius:var(--radius-pill);
+  border:var(--hairline) solid var(--rule);
+  background:var(--surface);
+  color:var(--text-hi);
+  pointer-events:none;
+  /* Hidden until ClickHint says otherwise. GSAP's autoAlpha writes visibility
+     inline, which outranks this — this rule only covers the frames between
+     first paint and ClickHint's constructor. */
+  visibility:hidden;
+}
+.gallery__hint-label{
+  display:inline-block; /* an inline box cannot be scaled */
+  font-family:var(--font-meta);
+  font-size:var(--size-micro);
+  font-weight:var(--weight-structural);
+  letter-spacing:var(--track-micro);
+  line-height:var(--leading-micro);
+  text-transform:uppercase;
+  white-space:nowrap;
+  visibility:hidden;
+}
+
 .gallery__slide figcaption{
   margin-top:var(--space-3);
   text-align:center;
