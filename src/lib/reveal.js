@@ -274,6 +274,14 @@ export function mountChoreography() {
     // reached — the footer would fade in and straight back out with the reader
     // sitting there looking at it. If the end is pinned to the document bottom,
     // nothing has actually left.
+    // `self`, not the `st` binding below: ScrollTrigger.create() runs its first
+    // refresh/update synchronously inside the constructor, so a trigger that is
+    // already scrolled past fires onLeave BEFORE `const st` has been
+    // initialised — a TDZ ReferenceError that aborted the rest of
+    // mountChoreography(), leaving every later reveal with no trigger at all
+    // and skipping main.js's closing refresh(). It read as "reveals below the
+    // fold never arrive", and it was invisible until main.js grew a .catch.
+    // The callback argument is the same instance, and it is always bound.
     const st = ScrollTrigger.create({
       trigger,
       start: REVEAL_START,
@@ -281,8 +289,8 @@ export function mountChoreography() {
       onEnter: show,
       onEnterBack: show,
       onLeaveBack: hide,
-      onLeave: () => {
-        if (st.end < ScrollTrigger.maxScroll(window) - 2) hide();
+      onLeave: (self) => {
+        if (self.end < ScrollTrigger.maxScroll(window) - 2) hide();
       },
     });
 
