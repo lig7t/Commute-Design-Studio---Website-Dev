@@ -42,10 +42,31 @@
   } catch (e) {}
 </script>
 
+<!-- Arm the boot screen. Same pre-paint pattern as the theme script above, and
+     for the same reason: the class must land before first paint or the real
+     page flashes underneath. CSS shows the overlay ONLY under .is-loading, so
+     gating it on a class that only JS can add means a reader with scripting
+     disabled never gets a stuck loading screen — the overlay is inert markup
+     and the page reads top to bottom. Do not move this into main.js: that is
+     a module script, deferred, and runs after first paint. -->
+<script>
+  document.documentElement.classList.add('is-loading');
+</script>
+
 <script type="module" src="/src/main.js"></script>
 </head>
 
 <body>
+
+<!-- Boot screen. aria-hidden rather than role="status": the count is pure
+     theatre with no information in it, the real page content is already in
+     the DOM and readable, and a live region ticking 0 to 100 would interrupt
+     a screen reader for two seconds to say nothing. Removed from the DOM on
+     dismiss; it holds nothing focusable, so there is no trap either way. -->
+<div class="loader" data-loader aria-hidden="true">
+  <p class="ds-display loader__count" data-loader-count>0</p>
+</div>
+
 <a class="ds-skip" href="#main">Skip to content</a>
 
 <!-- ===== Navigation — wordmark left, four links right, pill toggle ===== -->

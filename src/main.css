@@ -16,6 +16,9 @@
 @import url('components/navigation/navigation.css');
 @import url('components/theme-toggle/theme-toggle.css');
 @import url('components/project-card/project-card.css');
+/* Last in the components block: the boot screen covers everything, and
+   source order is what settles its ties with the rest of the layer. */
+@import url('components/loader/loader.css');
 
 @import url('sections/hero/hero.css');
 @import url('sections/work/work.css');

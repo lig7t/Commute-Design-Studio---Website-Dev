@@ -1,0 +1,56 @@
+/* ============================================================
+   loader.css — the boot screen.
+
+   The overlay markup ships in index.html and is shown ONLY under
+   `html.is-loading`, a class that JS adds pre-paint. Everything below hangs
+   off that selector on purpose:
+
+     no JS      the class never lands, so the overlay is never displayed and
+                a reader without scripting can never be shut out by it
+     no flash   the class is added before first paint, so the real page is
+                never briefly visible underneath
+
+   Never lift these rules out from under `.is-loading` to "simplify" — that
+   single selector is what makes the screen fail open instead of fail shut.
+
+   It is also not a splash screen. It sits on the site's own --surface, in
+   the site's own display type, resolved by the pre-paint theme script on
+   documentElement — so the dismissal reads as the page arriving on a
+   surface that was already there, not as one screen replacing another.
+   ============================================================ */
+
+.loader {
+  display: none;
+}
+
+html.is-loading .loader {
+  position: fixed;
+  inset: 0;
+  z-index: 100; /* above the nav (20), the drawer (19) and the card (40) */
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+
+  /* The only two properties this element animates, and loader.js reads this
+     duration back off the element rather than restating it in JS. */
+  transition:
+    opacity var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+
+.loader--out {
+  opacity: 0;
+  /* A short lift in the same direction and distance the page's own reveals
+     travel, so the exit belongs to the site's vocabulary. */
+  transform: translate3d(0, calc(var(--reveal-shift) * -1), 0);
+}
+
+.loader__count {
+  /* Tabular figures: proportional digits change the number's width on nearly
+     every frame, which reads as the centred number twitching sideways for
+     two seconds. */
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-wordmark);
+  color: var(--text-hi);
+  user-select: none;
+}
